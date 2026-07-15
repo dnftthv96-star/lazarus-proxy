@@ -10,7 +10,6 @@ app.use(express.urlencoded({ extended: true }));
 
 const BASE = 'https://lazarus.4logist.com';
 
-// Debug - try different date filter formats
 app.get('/debug', async (req, res) => {
   try {
     const fs = require('fs');
@@ -20,68 +19,75 @@ app.get('/debug', async (req, res) => {
     const un  = html.match(/const USERNAME\s*=\s*'([^']+)'/)[1];
     const pw  = html.match(/const PASSWORD\s*=\s*'([^']+)'/)[1];
 
-    // Get token
     const tokenRes = await fetch(`${BASE}/oauth/v2/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `grant_type=password&client_id=${cid}&client_secret=${cs}&username=${encodeURIComponent(un)}&password=${encodeURIComponent(pw)}`
     });
     const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) return res.send('<pre>Auth failed: ' + JSON.stringify(tokenData) + '</pre>');
+    if (!tokenData.access_token) return res.send('<pre>Auth failed</pre>');
     const token = tokenData.access_token;
 
-    async function tryFilter(label, body) {
-      try {
-        const r = await fetch(`${BASE}/api/orders/list`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify(body)
-        });
-        const d = await r.json();
-        const orders = d.data || d || [];
-        const count = Array.isArray(orders) ? orders.length : '?';
-        const firstDate = Array.isArray(orders) && orders[0] ? (orders[0].freight_date || orders[0].created || 'no date') : 'empty';
-        const lastDate = Array.isArray(orders) && orders[orders.length-1] ? (orders[orders.length-1].freight_date || orders[orders.length-1].created || 'no date') : 'empty';
-        return `${label}: ${count} orders | first: ${firstDate} | last: ${lastDate}`;
-      } catch(e) {
-        return `${label}: ERROR - ${e.message}`;
-      }
+    async function apiPost(path2, body) {
+      const r = await fetch(`${BASE}/${path2}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(body)
+      });
+      return r.json();
     }
 
-    const results = [];
+    const output = [];
+
+    // 1. Get first client
+    output.push('=== CLIENTS (first 2) ===');
+    const cliRes = await apiPost('api/clients/list', { perPage: 2, page: 0 });
+    const clients = cliRes.data || cliRes || [];
+    if (Array.isArray(clients) && clients[0]) {
+      output.push(JSON.stringify(clients[0], null, 2).substring(0, 1500));
+    } else {
+      output.push('Clients response: ' + JSON.stringify(cliRes).substring(0, 500));
+    }
+
+    // 2. Get first user
+    output.push('\n=== USERS (first 2) ===');
+    const usrRes = await apiPost('api/users/list', { perPage: 2, page: 0 });
+    const users = usrRes.data || usrRes || [];
+    if (Array.isArray(users) && users[0]) {
+      output.push(JSON.stringify(users[0], null, 2).substring(0, 1000));
+    } else {
+      output.push('Users response: ' + JSON.stringify(usrRes).substring(0, 500));
+    }
+
+    // 3. Get recent orders (last page)
+    output.push('\n=== RECENT ORDERS (last page) ===');
+    const totalRes = await apiPost('api/orders/list', { perPage: 1, page: 0 });
+    const totalItems = totalRes.dataInfo ? totalRes.dataInfo.amountItems : 0;
+    output.push('Total orders: ' + totalItems);
     
-    // Try different filter parameter names
-    results.push(await tryFilter('1. No filter (limit 500)', {limit:500}));
-    results.push(await tryFilter('2. dateFrom/dateTo', {dateFrom:'01.06.2026',dateTo:'15.07.2026',limit:500}));
-    results.push(await tryFilter('3. date_from/date_to', {date_from:'01.06.2026',date_to:'15.07.2026',limit:500}));
-    results.push(await tryFilter('4. freightDateFrom/To', {freightDateFrom:'01.06.2026',freightDateTo:'15.07.2026',limit:500}));
-    results.push(await tryFilter('5. freight_date_from/to', {freight_date_from:'01.06.2026',freight_date_to:'15.07.2026',limit:500}));
-    results.push(await tryFilter('6. createdFrom/To', {createdFrom:'01.06.2026',createdTo:'15.07.2026',limit:500}));
-    results.push(await tryFilter('7. created_from/to', {created_from:'01.06.2026',created_to:'15.07.2026',limit:500}));
-    results.push(await tryFilter('8. ISO dates', {dateFrom:'2026-06-01',dateTo:'2026-07-15',limit:500}));
-    results.push(await tryFilter('9. freight_date ISO', {freight_date_from:'2026-06-01',freight_date_to:'2026-07-15',limit:500}));
-    results.push(await tryFilter('10. filter nested', {filter:{dateFrom:'01.06.2026',dateTo:'15.07.2026'},limit:500}));
-    results.push(await tryFilter('11. offset 0', {offset:0,limit:500}));
-    results.push(await tryFilter('12. page/perPage', {page:1,perPage:500}));
-    results.push(await tryFilter('13. order desc + limit', {order:'desc',limit:10}));
-    results.push(await tryFilter('14. sort created desc', {sort:'created',direction:'desc',limit:10}));
-    results.push(await tryFilter('15. orderBy created desc', {orderBy:'created',orderDir:'DESC',limit:10}));
-
-    // Also get dataInfo from first request
-    const fullRes = await fetch(`${BASE}/api/orders/list`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({limit:5})
+    // Get last 5 orders
+    const lastPage = Math.floor((totalItems - 1) / 5);
+    const recentRes = await apiPost('api/orders/list', { perPage: 5, page: lastPage });
+    const recentOrders = recentRes.data || [];
+    
+    output.push('Last page (' + lastPage + '):');
+    recentOrders.forEach(o => {
+      output.push(`  ID:${o.id} code:${o.order_code_referral||o.order_code} freight_date:${o.freight_date} created:${o.created} createdAt:${o.createdAt} client_id:${o.client_id} user_id:${o.user_id} freight:${o.freight} profit:${o.profit}`);
     });
-    const fullData = await fullRes.json();
 
-    res.send('<pre style="font-size:13px;background:#111;color:#0f0;padding:20px;white-space:pre-wrap;line-height:1.8;">' +
-      'DATE FILTER TEST RESULTS:\n' +
-      '=========================\n\n' +
-      results.join('\n') +
-      '\n\n=========================\n' +
-      'dataInfo: ' + JSON.stringify(fullData.dataInfo, null, 2) +
-      '</pre>');
+    // 4. Get one full order info for L01754 or latest
+    output.push('\n=== FULL ORDER INFO (latest) ===');
+    if (recentOrders.length > 0) {
+      const lastId = recentOrders[recentOrders.length - 1].id;
+      const fullRes = await fetch(`${BASE}/api/orders/${lastId}/all-info`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const fullData = await fullRes.json();
+      const fullOrder = fullData.data || fullData;
+      output.push(JSON.stringify(fullOrder, null, 2).substring(0, 2000));
+    }
+
+    res.send('<pre style="font-size:12px;background:#111;color:#0f0;padding:20px;white-space:pre-wrap;word-wrap:break-word;">' + output.join('\n') + '</pre>');
 
   } catch (e) {
     res.send('<pre>Error: ' + e.message + '\n' + e.stack + '</pre>');
