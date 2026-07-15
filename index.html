@@ -395,22 +395,35 @@ async function loadData(){
     await loadRefData();
 
     setStatus('loading','Загружаем заказы...');
-    const res=await apiPost('api/orders/list',{
-      dateFrom: df.split('-').reverse().join('.'),
-      dateTo: dt.split('-').reverse().join('.'),
-      limit: 500
-    });
     
-    let orders = res.data || res || [];
-    if(!Array.isArray(orders)) throw new Error('Неожиданный формат: '+JSON.stringify(res).slice(0,200));
+    // Load all orders using pagination
+    let allOrders = [];
+    let page = 0;
+    const perPage = 500;
+    let totalItems = 9999;
     
-    // Filter by date client-side as backup
-    const dfDate = new Date(df);
-    const dtDate = new Date(dt);
-    dtDate.setHours(23,59,59);
-    orders = orders.filter(o => {
-      const d = new Date(o.created || o.freight_date || o.createdAt || '');
-      return d >= dfDate && d <= dtDate;
+    while (allOrders.length < totalItems) {
+      setStatus('loading', 'Загружаем заказы... (' + allOrders.length + ')');
+      const res = await apiPost('api/orders/list', { page: page, perPage: perPage });
+      const batch = res.data || [];
+      if (res.dataInfo && res.dataInfo.amountItems) totalItems = res.dataInfo.amountItems;
+      if (!Array.isArray(batch) || batch.length === 0) break;
+      allOrders = allOrders.concat(batch);
+      page++;
+      if (page > 20) break; // safety limit
+    }
+    
+    setStatus('loading', 'Фильтруем по периоду...');
+    
+    // Client-side date filter
+    const fromDate = new Date(df + 'T00:00:00');
+    const toDate = new Date(dt + 'T23:59:59');
+    
+    let orders = allOrders.filter(o => {
+      const raw = o.freight_date || o.created || o.createdAt || '';
+      if (!raw) return false;
+      const d = new Date(raw.replace(' ', 'T'));
+      return d >= fromDate && d <= toDate;
     });
 
     renderDashboard(orders,df,dt);
