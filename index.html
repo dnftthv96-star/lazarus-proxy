@@ -293,7 +293,7 @@ const TIP={backgroundColor:'#111d32',borderColor:'#253857',borderWidth:1,titleCo
 Chart.defaults.color='#4d6280';
 Chart.defaults.font.size=10;
 
-let token=null, charts={};
+let token=null, charts={}, usersMap={}, clientsMap={};
 
 function eur(v){ return '€'+Math.round(v).toLocaleString('ru'); }
 
@@ -320,39 +320,64 @@ function setMonth(){
 
 function setStatus(type,text){
   const bar=document.getElementById('status-bar');
-  const icon=document.getElementById('status-icon');
   document.getElementById('status-text').textContent=text;
   bar.className=`status-bar ${type}`;
+  const icon=document.getElementById('status-icon');
   icon.textContent=type==='loading'?'⟳':type==='success'?'✓':'✕';
   icon.className=type==='loading'?'spin':'';
-  if(type==='success') setTimeout(()=>bar.className='status-bar hidden',3000);
+  if(type==='success') setTimeout(()=>bar.className='status-bar hidden',4000);
 }
 
+// Auth
 async function getToken(){
   const body=`grant_type=password&client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&username=${encodeURIComponent(USERNAME)}&password=${encodeURIComponent(PASSWORD)}`;
-  const r=await fetch(`${PROXY}/proxy/oauth/v2/token`,{
+  const r=await fetch('/proxy/oauth/v2/token',{
     method:'POST',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body
   });
-  if(!r.ok) throw new Error(`Авторизация: ${r.status}`);
+  if(!r.ok) throw new Error('Авторизация не удалась: '+r.status);
   const d=await r.json();
-  if(!d.access_token) throw new Error('Токен не получен: '+JSON.stringify(d));
+  if(!d.access_token) throw new Error('Токен не получен');
   return d.access_token;
 }
 
 async function apiPost(path,payload){
   if(!token) token=await getToken();
-  const r=await fetch(`${PROXY}/proxy/${path}`,{
+  const r=await fetch('/proxy/'+path,{
     method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
     body:JSON.stringify(payload)
   });
   if(r.status===401){ token=await getToken(); return apiPost(path,payload); }
-  if(!r.ok) throw new Error(`API ${path}: ${r.status}`);
+  if(!r.ok) throw new Error('API '+path+': '+r.status);
   return r.json();
 }
 
+// Load reference data (users + clients)
+async function loadRefData(){
+  try {
+    const [usersRes, clientsRes] = await Promise.all([
+      apiPost('api/users/list', {}),
+      apiPost('api/clients/list', {})
+    ]);
+    const users = usersRes.data || usersRes || [];
+    const clients = clientsRes.data || clientsRes || [];
+    if(Array.isArray(users)) users.forEach(u => {
+      usersMap[u.id] = u.full_name || u.fullName || u.name || ((u.first_name||'')+ ' '+(u.last_name||'')).trim() || ('User '+u.id);
+    });
+    if(Array.isArray(clients)) clients.forEach(c => {
+      clientsMap[c.id] = c.short_name || c.shortName || c.name || c.full_name || c.title || ('Client '+c.id);
+    });
+  } catch(e) {
+    console.warn('Ref data error:', e);
+  }
+}
+
+function getUserName(id){ return usersMap[id] || ('User '+id); }
+function getClientName(id){ return clientsMap[id] || ('Client '+id); }
+
+// Main load
 async function loadData(){
   const df=document.getElementById('date-from').value;
   const dt=document.getElementById('date-to').value;
@@ -361,94 +386,127 @@ async function loadData(){
   btn.disabled=true;
   document.getElementById('content').style.display='none';
   document.getElementById('empty-state').style.display='none';
-  setStatus('loading','Подключаемся к 4logist...');
+  setStatus('loading','Авторизация...');
+
   try{
-    setStatus('loading','Авторизация...');
     token=await getToken();
+    
+    setStatus('loading','Загружаем справочники...');
+    await loadRefData();
+
     setStatus('loading','Загружаем заказы...');
-    const res=await apiPost('api/orders/list',{dateFrom:df,dateTo:dt,limit:500});
-    const orders=res.data||res.orders||res||[];
-    if(!Array.isArray(orders)) throw new Error('Формат ответа: '+JSON.stringify(res).slice(0,200));
+    const res=await apiPost('api/orders/list',{
+      dateFrom: df.split('-').reverse().join('.'),
+      dateTo: dt.split('-').reverse().join('.'),
+      limit: 500
+    });
+    
+    let orders = res.data || res || [];
+    if(!Array.isArray(orders)) throw new Error('Неожиданный формат: '+JSON.stringify(res).slice(0,200));
+    
+    // Filter by date client-side as backup
+    const dfDate = new Date(df);
+    const dtDate = new Date(dt);
+    dtDate.setHours(23,59,59);
+    orders = orders.filter(o => {
+      const d = new Date(o.created || o.freight_date || o.createdAt || '');
+      return d >= dfDate && d <= dtDate;
+    });
+
     renderDashboard(orders,df,dt);
-    setStatus('success',`Загружено ${orders.length} заказов`);
+    setStatus('success','Загружено '+orders.length+' заказов');
     document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');
     document.getElementById('content').style.display='block';
   }catch(e){
     setStatus('error','Ошибка: '+e.message);
     document.getElementById('empty-state').style.display='block';
-    document.getElementById('empty-state').innerHTML=`<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">${e.message}</div>`;
+    document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';
   }finally{ btn.disabled=false; }
 }
 
 function renderDashboard(orders,df,dt){
   const d1=new Date(df).toLocaleDateString('ru',{day:'numeric',month:'short'});
   const d2=new Date(dt).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric'});
-  document.getElementById('period-label').textContent=`${d1} — ${d2}`;
+  document.getElementById('period-label').textContent=d1+' — '+d2;
 
-  let fr=0,ex=0,pr=0;
+  let totalFr=0,totalEx=0,totalPr=0;
   const mgrMap={},cliMap={},stMap={},dayMap={};
 
   orders.forEach(o=>{
-    const f=parseFloat(o.freight||o.freightAmount||0);
-    const p=parseFloat(o.profit||o.profitAmount||0);
-    const e=parseFloat(o.expenses||o.expensesAmount||f-p||0);
-    const m=String(o.manager||o.managerName||o.user||o.responsible||'—');
-    const c=String(o.client||o.clientName||o.client_name||'—').slice(0,30);
-    const s=String(o.status||o.orderStatus||o.order_status||'—');
-    const day=(o.date||o.orderDate||o.created_at||'').slice(8,10)||'?';
+    const fr = parseFloat(o.freight || o.freight_base || 0);
+    const ex = parseFloat(o.cost || o.cost_current_currency || 0);
+    const pr = parseFloat(o.profit || o.profit_current_currency || 0);
+    const mgrId = o.user_id || o.logistician_id;
+    const mgrName = getUserName(mgrId);
+    const cliId = o.client_id;
+    const cliName = getClientName(cliId);
+    const stName = (o.status && typeof o.status === 'object') ? (o.status.name || 'N/A') : String(o.status || 'N/A');
+    const dateStr = o.freight_date || o.created || o.createdAt || '';
+    const day = dateStr.slice(8,10) || '?';
 
-    fr+=f; ex+=e; pr+=p;
-    if(!mgrMap[m]) mgrMap[m]={n:0,fr:0,pr:0,ex:0};
-    mgrMap[m].n++; mgrMap[m].fr+=f; mgrMap[m].pr+=p; mgrMap[m].ex+=e;
-    if(!cliMap[c]) cliMap[c]={n:0,fr:0,pr:0};
-    cliMap[c].n++; cliMap[c].fr+=f; cliMap[c].pr+=p;
-    stMap[s]=(stMap[s]||0)+1;
+    totalFr+=fr; totalEx+=ex; totalPr+=pr;
+
+    if(!mgrMap[mgrName]) mgrMap[mgrName]={n:0,fr:0,pr:0,ex:0};
+    mgrMap[mgrName].n++; mgrMap[mgrName].fr+=fr; mgrMap[mgrName].pr+=pr; mgrMap[mgrName].ex+=ex;
+
+    if(!cliMap[cliName]) cliMap[cliName]={n:0,fr:0,pr:0};
+    cliMap[cliName].n++; cliMap[cliName].fr+=fr; cliMap[cliName].pr+=pr;
+
+    stMap[stName]=(stMap[stName]||0)+1;
+
     if(!dayMap[day]) dayMap[day]={fr:0,ex:0,pr:0};
-    dayMap[day].fr+=f; dayMap[day].ex+=e; dayMap[day].pr+=p;
+    dayMap[day].fr+=fr; dayMap[day].ex+=ex; dayMap[day].pr+=pr;
   });
 
-  const mg=fr>0?Math.round(pr/fr*100*10)/10:0;
+  const mg=totalFr>0?Math.round(totalPr/totalFr*1000)/10:0;
+
+  // KPIs
   document.getElementById('k-count').textContent=orders.length;
-  document.getElementById('k-freight').textContent=eur(fr);
-  document.getElementById('k-expenses').textContent=eur(ex);
-  document.getElementById('k-profit').textContent=eur(pr);
-  document.getElementById('k-count-d').textContent=`${orders.length} заказов`;
+  document.getElementById('k-freight').textContent=eur(totalFr);
+  document.getElementById('k-expenses').textContent=eur(totalEx);
+  document.getElementById('k-profit').textContent=eur(totalPr);
+  document.getElementById('k-count-d').textContent=orders.length+' заказов';
   document.getElementById('k-freight-d').textContent='за период';
-  document.getElementById('k-expenses-d').textContent=`${Math.round(ex/fr*100)||0}% от фрахта`;
-  document.getElementById('k-margin-d').textContent=`Маржа ${mg}%`;
+  document.getElementById('k-expenses-d').textContent=(totalFr>0?Math.round(totalEx/totalFr*100):0)+'% от фрахта';
+  document.getElementById('k-margin-d').textContent='Маржа '+mg+'%';
   document.getElementById('k-margin-d').className='kd '+(mg>15?'up':'dn');
 
   // Status pills
-  const stCls={'In work':'piw','Ordered and scheduled':'pos','Delivered':'pdl','In work last step':'pls','in_work':'piw','ordered':'pos','delivered':'pdl'};
+  const stCls={'In work':'piw','Ordered and scheduled':'pos','Ordered':'pos','Delivered':'pdl','Finished':'pdl','In work last step':'pls','IN WORK LAST STEP':'pls'};
   document.getElementById('status-pills').innerHTML=Object.entries(stMap).map(([s,c])=>
-    `<div class="pill ${stCls[s]||'piw'}"><span class="pdot"></span>${String(s).replace('Ordered and scheduled','Ordered').replace('In work last step','Last step')}<span class="pc">${c}</span></div>`
+    '<div class="pill '+(stCls[s]||'piw')+'"><span class="pdot"></span>'+s+'<span class="pc">'+c+'</span></div>'
   ).join('');
 
   // Managers table
   const ms=Object.entries(mgrMap).sort((a,b)=>b[1].pr-a[1].pr);
-  document.getElementById('mgr-table').innerHTML=`<table class="utbl"><thead><tr><th>Менеджер</th><th>Зак.</th><th>Фрахт</th><th>Расходы</th><th>Прибыль</th><th>Маржа</th></tr></thead><tbody>`+
-    ms.map(([m,v])=>`<tr><td>${m.split(' ').slice(0,2).join(' ')}</td><td style="text-align:right;font-weight:800;color:var(--ink)">${v.n}</td><td>${eur(v.fr)}</td><td>${eur(v.ex)}</td><td class="pr-g">${eur(v.pr)}</td><td>${v.fr>0?Math.round(v.pr/v.fr*100):0}%</td></tr>`).join('')+
-    `<tr class="tot"><td>Итого</td><td style="text-align:right">${orders.length}</td><td>${eur(fr)}</td><td>${eur(ex)}</td><td class="pr-g">${eur(pr)}</td><td>${mg}%</td></tr></tbody></table>`;
+  document.getElementById('mgr-table').innerHTML='<table class="utbl"><thead><tr><th>Менеджер</th><th>Зак.</th><th>Фрахт</th><th>Расходы</th><th>Прибыль</th><th>Маржа</th></tr></thead><tbody>'+
+    ms.map(([m,v])=>'<tr><td>'+m+'</td><td style="text-align:right;font-weight:800;color:var(--ink)">'+v.n+'</td><td>'+eur(v.fr)+'</td><td>'+eur(v.ex)+'</td><td class="pr-g">'+eur(v.pr)+'</td><td>'+(v.fr>0?Math.round(v.pr/v.fr*100):0)+'%</td></tr>').join('')+
+    '<tr class="tot"><td>Итого</td><td style="text-align:right">'+orders.length+'</td><td>'+eur(totalFr)+'</td><td>'+eur(totalEx)+'</td><td class="pr-g">'+eur(totalPr)+'</td><td>'+mg+'%</td></tr></tbody></table>';
 
   // Orders table
-  document.getElementById('orders-table').innerHTML=`<table class="ord-tbl"><thead><tr><th>№</th><th>Клиент</th><th>Менеджер</th><th>Статус</th><th class="r">Фрахт</th><th class="r">Расходы</th><th class="r">Прибыль</th></tr></thead><tbody>`+
+  document.getElementById('orders-table').innerHTML='<table class="ord-tbl"><thead><tr><th>№</th><th>Клиент</th><th>Менеджер</th><th>Статус</th><th class="r">Фрахт</th><th class="r">Расходы</th><th class="r">Прибыль</th></tr></thead><tbody>'+
     orders.slice(0,50).map(o=>{
-      const f=parseFloat(o.freight||0),e=parseFloat(o.expenses||f-parseFloat(o.profit||0)||0),p=parseFloat(o.profit||0);
-      const s=o.status||'—';
-      const ss=String(s);const sc=ss.includes('last')?'sls':ss.includes('work')||ss.includes('Work')?'siw':ss.includes('Order')||ss.includes('order')?'sos':ss.includes('Deliver')||ss.includes('deliver')?'sdl':'siw';
-      return `<tr><td class="ono">${o.id||o.orderId||o.order_number||'—'}</td><td><div class="ocl">${String(o.client||o.clientName||'—').slice(0,22)}</div></td><td class="osb">${String(o.manager||'—').split(' ')[0]}</td><td><span class="sb ${sc}">${String(s).replace('Ordered and scheduled','Ordered').replace('In work last step','Last step')}</span></td><td class="r ofr">${f?eur(f):'—'}</td><td class="r osb">${e?eur(e):'—'}</td><td class="r opr">${p?eur(p):'—'}</td></tr>`;
+      const fr=parseFloat(o.freight||0), ex=parseFloat(o.cost||0), pr=parseFloat(o.profit||0);
+      const stName=(o.status&&typeof o.status==='object')?(o.status.name||'—'):String(o.status||'—');
+      const stLow=stName.toLowerCase();
+      const sc=stLow.includes('last')?'sls':stLow.includes('work')?'siw':(stLow.includes('order')||stLow.includes('sched'))?'sos':(stLow.includes('deliver')||stLow.includes('finish'))?'sdl':'siw';
+      const code=o.order_code_referral||o.order_code||o.id;
+      const cli=getClientName(o.client_id);
+      const mgr=getUserName(o.user_id||o.logistician_id);
+      return '<tr><td class="ono">'+code+'</td><td><div class="ocl">'+cli.slice(0,25)+'</div></td><td class="osb">'+mgr+'</td><td><span class="sb '+sc+'">'+stName+'</span></td><td class="r ofr">'+eur(fr)+'</td><td class="r osb">'+eur(ex)+'</td><td class="r opr">'+eur(pr)+'</td></tr>';
     }).join('')+
-    (orders.length>50?`<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:10px;font-size:11px">... ещё ${orders.length-50} заказов</td></tr>`:'')+
+    (orders.length>50?'<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:10px;font-size:11px">... ещё '+(orders.length-50)+' заказов</td></tr>':'')+
     '</tbody></table>';
 
   // Daily charts
   const days=Object.keys(dayMap).sort((a,b)=>+a-+b);
   ['freightChart','expChart','profitChart'].forEach(id=>{ if(charts[id]){charts[id].destroy();delete charts[id];} });
+  
   function lineChart(id,data,color,label){
     charts[id]=new Chart(document.getElementById(id),{
       type:'line',
       data:{labels:days,datasets:[{label,data,borderColor:color,backgroundColor:color+'18',fill:true,tension:.3,borderWidth:2,pointRadius:4,pointBackgroundColor:color}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...TIP,callbacks:{label:c=>` ${label}: €${c.parsed.y.toLocaleString()}`}}},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...TIP,callbacks:{label:c=>' '+label+': €'+c.parsed.y.toLocaleString()}}},
         scales:{x:{grid:{color:'#1e2f4a'},ticks:{color:'#4d6280',font:{size:8},maxRotation:0}},y:{grid:{color:'#1e2f4a'},ticks:{color:'#4d6280',callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}}}
     });
   }
@@ -464,15 +522,15 @@ function renderDashboard(orders,df,dt){
       {label:'Фрахт',data:ms.map(([,v])=>Math.round(v.fr)),backgroundColor:B+'55',borderColor:B,borderWidth:1,borderRadius:4},
       {label:'Прибыль',data:ms.map(([,v])=>Math.round(v.pr)),backgroundColor:G+'88',borderColor:G,borderWidth:1,borderRadius:4}
     ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8fa3bf',boxWidth:8,padding:10,font:{size:9}}},tooltip:{...TIP,callbacks:{label:c=>` ${c.dataset.label}: €${c.parsed.y.toLocaleString()}`}}},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8fa3bf',boxWidth:8,padding:10,font:{size:9}}},tooltip:{...TIP,callbacks:{label:c=>' '+c.dataset.label+': €'+c.parsed.y.toLocaleString()}}},
       scales:{x:{grid:{color:'#1e2f4a'},ticks:{color:'#4d6280',font:{size:9}}},y:{grid:{color:'#1e2f4a'},ticks:{color:'#4d6280',callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}}}
   });
 
   // Clients table
-  const cs=Object.entries(cliMap).sort((a,b)=>b[1].pr-a[1].pr).slice(0,10);
-  document.getElementById('cli-table').innerHTML=`<table class="utbl"><thead><tr><th>Клиент</th><th>Зак.</th><th>Фрахт</th><th>Прибыль</th><th>Маржа</th></tr></thead><tbody>`+
-    cs.map(([c,v])=>`<tr><td>${c.slice(0,20)}</td><td style="text-align:right;font-weight:800;color:var(--ink)">${v.n}</td><td>${eur(v.fr)}</td><td class="pr-g">${eur(v.pr)}</td><td>${v.fr>0?Math.round(v.pr/v.fr*100):0}%</td></tr>`).join('')+
-    `<tr class="tot"><td>Итого</td><td style="text-align:right">${orders.length}</td><td>${eur(fr)}</td><td class="pr-g">${eur(pr)}</td><td>${mg}%</td></tr></tbody></table>`;
+  const cs=Object.entries(cliMap).sort((a,b)=>b[1].pr-a[1].pr).slice(0,15);
+  document.getElementById('cli-table').innerHTML='<table class="utbl"><thead><tr><th>Клиент</th><th>Зак.</th><th>Фрахт</th><th>Прибыль</th><th>Маржа</th></tr></thead><tbody>'+
+    cs.map(([c,v])=>'<tr><td>'+c.slice(0,22)+'</td><td style="text-align:right;font-weight:800;color:var(--ink)">'+v.n+'</td><td>'+eur(v.fr)+'</td><td class="pr-g">'+eur(v.pr)+'</td><td>'+(v.fr>0?Math.round(v.pr/v.fr*100):0)+'%</td></tr>').join('')+
+    '<tr class="tot"><td>Итого</td><td style="text-align:right">'+orders.length+'</td><td>'+eur(totalFr)+'</td><td class="pr-g">'+eur(totalPr)+'</td><td>'+mg+'%</td></tr></tbody></table>';
 }
 
 setMonth();
