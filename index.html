@@ -364,10 +364,10 @@ async function loadRefData(){
     const users = usersRes.data || usersRes || [];
     const clients = clientsRes.data || clientsRes || [];
     if(Array.isArray(users)) users.forEach(u => {
-      usersMap[u.id] = u.full_name || u.fullName || u.name || ((u.first_name||'')+ ' '+(u.last_name||'')).trim() || ('User '+u.id);
+      usersMap[u.id] = u.name || u.full_name || u.username || ('User '+u.id);
     });
     if(Array.isArray(clients)) clients.forEach(c => {
-      clientsMap[c.id] = c.short_name || c.shortName || c.name || c.full_name || c.title || ('Client '+c.id);
+      clientsMap[c.id] = c.company_name || c.company_name_original || c.short_name || c.name || ('Client '+c.id);
     });
   } catch(e) {
     console.warn('Ref data error:', e);
