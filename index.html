@@ -215,7 +215,7 @@ async function loadRefData(){
   }catch(e){console.warn('Ref data error:',e);}
 }
 
-function getUserName(id){return usersMap[id]||(id==31?'(Удалённый)':'User '+id);}
+function getUserName(id){return usersMap[id]||(id==31?'Artjoms Hondozko':'User '+id);}
 function getClientName(id){return clientsMap[id]||('Client '+id);}
 
 async function loadData(){
@@ -250,8 +250,14 @@ async function loadData(){
       if(page>20)break;
     }
 
-    let orders=allOrders;
-    console.log('Loaded',orders.length,'orders for period',df,'to',dt);
+    // Safety: filter by date client-side in case API boundary is off
+    let orders = allOrders.filter(o => {
+      const raw = o.freight_date || o.created || '';
+      if (!raw) return true; // keep if no date
+      const d = raw.slice(0,10); // YYYY-MM-DD
+      return d >= df && d <= dt;
+    });
+    console.log('API returned',allOrders.length,', after date filter:',orders.length,'for',df,'to',dt);
 
     renderDashboard(orders,df,dt);
     setStatus('success','Загружено '+orders.length+' заказов');
@@ -311,7 +317,8 @@ function renderDashboard(orders,df,dt){
     const stObj=o.status;const stName=(stObj&&typeof stObj==='object')?(stObj.name||'—'):String(stObj||'—');
     const stLow=stName.toLowerCase();
     const sc=stLow.includes('last')?'sls':stLow.includes('work')?'siw':(stLow.includes('order')||stLow.includes('sched'))?'sos':(stLow.includes('deliver')||stLow.includes('finish'))?'sdl':'siw';
-    const code=o.order_code_referral||o.order_code||o.id;
+    const rawCode=o.order_code_referral||'';
+      const code=rawCode.length>0?rawCode:(o.order_code&&o.order_code.length<8?o.order_code:'L0'+o.id);
     return '<tr><td class="ono">'+code+'</td><td><div class="ocl">'+getClientName(o.client_id).slice(0,25)+'</div></td><td class="osb">'+getUserName(o.user_id||o.logistician_id)+'</td><td><span class="sb '+sc+'">'+stName+'</span></td><td class="r ofr">'+eur(fr)+'</td><td class="r osb">'+eur(ex)+'</td><td class="r opr">'+eur(pr)+'</td></tr>';
   }).join('')+(orders.length>50?'<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:10px;font-size:11px">... ещё '+(orders.length-50)+' заказов</td></tr>':'')+'</tbody></table>';
 
