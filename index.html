@@ -215,7 +215,7 @@ async function loadRefData(){
   }catch(e){console.warn('Ref data error:',e);}
 }
 
-function getUserName(id){return usersMap[id]||('User '+id);}
+function getUserName(id){return usersMap[id]||(id==31?'(Удалённый)':'User '+id);}
 function getClientName(id){return clientsMap[id]||('Client '+id);}
 
 async function loadData(){
@@ -233,17 +233,15 @@ async function loadData(){
     await loadRefData();
     setStatus('loading','Загружаем заказы...');
 
-    // Symfony filter format: form_order_api_filter[dateFrom], form_order_api_filter[dateTo]
-    const filterBody = {};
-    filterBody['form_order_api_filter[dateFrom]'] = df;
-    filterBody['form_order_api_filter[dateTo]'] = dt;
-    filterBody['perPage'] = 500;
-
+    // JSON nested Symfony filter format (tested & working)
     let allOrders=[],page=0,totalItems=9999;
     while(allOrders.length<totalItems){
       setStatus('loading','Загружаем заказы... ('+allOrders.length+')');
-      filterBody['page']=page;
-      const res=await apiPost('api/orders/list',filterBody);
+      const res=await apiPost('api/orders/list',{
+        form_order_api_filter:{dateFrom:df,dateTo:dt},
+        perPage:500,
+        page:page
+      });
       const batch=res.data||[];
       if(res.dataInfo&&res.dataInfo.amountItems)totalItems=res.dataInfo.amountItems;
       if(!Array.isArray(batch)||batch.length===0)break;
