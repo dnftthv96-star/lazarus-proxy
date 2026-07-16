@@ -28,73 +28,103 @@ app.get('/debug', async (req, res) => {
     if (!tokenData.access_token) return res.send('<pre>Auth failed</pre>');
     const token = tokenData.access_token;
 
-    async function apiPost(path2, body) {
-      const r = await fetch(`${BASE}/${path2}`, {
+    async function tryFilter(label, contentType, body) {
+      try {
+        const r = await fetch(`${BASE}/api/orders/list`, {
+          method: 'POST',
+          headers: { 'Content-Type': contentType, 'Authorization': 'Bearer ' + token },
+          body: body
+        });
+        const d = await r.json();
+        const orders = d.data || d || [];
+        const count = Array.isArray(orders) ? orders.length : '?';
+        const total = d.dataInfo ? d.dataInfo.amountItems : '?';
+        return `${label}: ${count} on page, ${total} total`;
+      } catch(e) {
+        return `${label}: ERROR - ${e.message}`;
+      }
+    }
+
+    const results = [];
+    
+    // Try form-urlencoded with Symfony format
+    results.push(await tryFilter(
+      '1. form-urlencoded + YYYY-MM-DD',
+      'application/x-www-form-urlencoded',
+      'form_order_api_filter[dateFrom]=2026-07-01&form_order_api_filter[dateTo]=2026-07-16&perPage=5'
+    ));
+
+    results.push(await tryFilter(
+      '2. form-urlencoded + DD.MM.YYYY',
+      'application/x-www-form-urlencoded',
+      'form_order_api_filter[dateFrom]=01.07.2026&form_order_api_filter[dateTo]=16.07.2026&perPage=5'
+    ));
+
+    results.push(await tryFilter(
+      '3. JSON nested object',
+      'application/json',
+      JSON.stringify({form_order_api_filter:{dateFrom:'2026-07-01',dateTo:'2026-07-16'},perPage:5})
+    ));
+
+    results.push(await tryFilter(
+      '4. JSON nested DD.MM.YYYY',
+      'application/json',
+      JSON.stringify({form_order_api_filter:{dateFrom:'01.07.2026',dateTo:'16.07.2026'},perPage:5})
+    ));
+
+    results.push(await tryFilter(
+      '5. JSON flat brackets YYYY-MM-DD',
+      'application/json',
+      JSON.stringify({'form_order_api_filter[dateFrom]':'2026-07-01','form_order_api_filter[dateTo]':'2026-07-16',perPage:5})
+    ));
+
+    results.push(await tryFilter(
+      '6. JSON flat brackets DD.MM.YYYY',
+      'application/json',
+      JSON.stringify({'form_order_api_filter[dateFrom]':'01.07.2026','form_order_api_filter[dateTo]':'16.07.2026',perPage:5})
+    ));
+
+    results.push(await tryFilter(
+      '7. form-urlencoded loadingDate',
+      'application/x-www-form-urlencoded',
+      'form_order_api_filter[loadingDate]=2026-07-01&form_order_api_filter[unloadingDate]=2026-07-16&perPage=5'
+    ));
+
+    results.push(await tryFilter(
+      '8. No filter baseline',
+      'application/json',
+      JSON.stringify({perPage:5})
+    ));
+
+    // Also check user 31
+    results.push('');
+    results.push('=== USER 31 CHECK ===');
+    try {
+      const u31 = await fetch(`${BASE}/api/users/list`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify(body)
+        body: JSON.stringify({perPage:500,page:0})
       });
-      return r.json();
+      const u31data = await u31.json();
+      const users = u31data.data || u31data || [];
+      const total_users = u31data.dataInfo ? u31data.dataInfo.amountItems : '?';
+      results.push('Total users: ' + total_users + ', loaded: ' + (Array.isArray(users)?users.length:'?'));
+      if (Array.isArray(users)) {
+        const user31 = users.find(u => u.id === 31);
+        results.push('User 31: ' + (user31 ? JSON.stringify(user31).substring(0,300) : 'NOT FOUND in loaded page'));
+        results.push('All user IDs: ' + users.map(u=>u.id+':'+u.name).join(', '));
+      }
+    } catch(e) {
+      results.push('User check error: ' + e.message);
     }
 
-    const output = [];
-
-    // 1. Get first client
-    output.push('=== CLIENTS (first 2) ===');
-    const cliRes = await apiPost('api/clients/list', { perPage: 2, page: 0 });
-    const clients = cliRes.data || cliRes || [];
-    if (Array.isArray(clients) && clients[0]) {
-      output.push(JSON.stringify(clients[0], null, 2).substring(0, 1500));
-    } else {
-      output.push('Clients response: ' + JSON.stringify(cliRes).substring(0, 500));
-    }
-
-    // 2. Get first user
-    output.push('\n=== USERS (first 2) ===');
-    const usrRes = await apiPost('api/users/list', { perPage: 2, page: 0 });
-    const users = usrRes.data || usrRes || [];
-    if (Array.isArray(users) && users[0]) {
-      output.push(JSON.stringify(users[0], null, 2).substring(0, 1000));
-    } else {
-      output.push('Users response: ' + JSON.stringify(usrRes).substring(0, 500));
-    }
-
-    // 3. Get recent orders (last page)
-    output.push('\n=== RECENT ORDERS (last page) ===');
-    const totalRes = await apiPost('api/orders/list', { perPage: 1, page: 0 });
-    const totalItems = totalRes.dataInfo ? totalRes.dataInfo.amountItems : 0;
-    output.push('Total orders: ' + totalItems);
-    
-    // Get last 5 orders
-    const lastPage = Math.floor((totalItems - 1) / 5);
-    const recentRes = await apiPost('api/orders/list', { perPage: 5, page: lastPage });
-    const recentOrders = recentRes.data || [];
-    
-    output.push('Last page (' + lastPage + '):');
-    recentOrders.forEach(o => {
-      output.push(`  ID:${o.id} code:${o.order_code_referral||o.order_code} freight_date:${o.freight_date} created:${o.created} createdAt:${o.createdAt} client_id:${o.client_id} user_id:${o.user_id} freight:${o.freight} profit:${o.profit}`);
-    });
-
-    // 4. Get one full order info for L01754 or latest
-    output.push('\n=== FULL ORDER INFO (latest) ===');
-    if (recentOrders.length > 0) {
-      const lastId = recentOrders[recentOrders.length - 1].id;
-      const fullRes = await fetch(`${BASE}/api/orders/${lastId}/all-info`, {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      const fullData = await fullRes.json();
-      const fullOrder = fullData.data || fullData;
-      output.push(JSON.stringify(fullOrder, null, 2).substring(0, 2000));
-    }
-
-    res.send('<pre style="font-size:12px;background:#111;color:#0f0;padding:20px;white-space:pre-wrap;word-wrap:break-word;">' + output.join('\n') + '</pre>');
+    res.send('<pre style="font-size:13px;background:#111;color:#0f0;padding:20px;white-space:pre-wrap;line-height:2;">' + results.join('\n') + '</pre>');
 
   } catch (e) {
-    res.send('<pre>Error: ' + e.message + '\n' + e.stack + '</pre>');
+    res.send('<pre>Error: ' + e.message + '</pre>');
   }
 });
 
-// Proxy
 app.all('/proxy/*', async (req, res) => {
   const apiPath = req.params[0];
   const url = `${BASE}/${apiPath}`;
@@ -115,13 +145,10 @@ app.all('/proxy/*', async (req, res) => {
     });
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(text);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
