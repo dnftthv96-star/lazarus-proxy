@@ -29,63 +29,64 @@ app.get('/debug', async (req, res) => {
     const token = tokenData.access_token;
 
     const output = [];
-
-    // Load July orders
+    
+    // Get one recent order with ALL fields to find expeditor
+    output.push('=== SEARCHING FOR EXPEDITOR FIELDS ===');
     const ordRes = await fetch(`${BASE}/api/orders/list`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({form_order_api_filter:{dateFrom:'2026-07-01',dateTo:'2026-07-16'},perPage:500})
+      body: JSON.stringify({form_order_api_filter:{dateFrom:'2026-07-01',dateTo:'2026-07-16'},perPage:2})
     });
     const ordData = await ordRes.json();
     const orders = ordData.data || [];
-
-    // Find L01747 and L01746
-    const targets = ['L01747','L01746','L01748','L01733'];
     
-    for (const target of targets) {
-      const order = orders.find(o => (o.order_code_referral || o.order_code) === target);
-      if (order) {
-        output.push(`=== ${target} (id: ${order.id}) - ALL NUMERIC FIELDS ===`);
+    if (orders[0]) {
+      const o = orders[0];
+      output.push('Order: ' + (o.order_code_referral || o.id));
+      output.push('');
+      
+      // Show ALL fields that might relate to expeditor/logistician
+      for (const [k, v] of Object.entries(o)) {
+        const kl = k.toLowerCase();
+        if (kl.includes('expedi') || kl.includes('logist') || kl.includes('forward') || 
+            kl.includes('user') || kl.includes('manager') || kl.includes('person') ||
+            kl.includes('agent') || kl.includes('responsible') || kl.includes('assign') ||
+            kl.includes('employee') || kl.includes('worker') || kl.includes('handler')) {
+          output.push('  ' + k + ': ' + JSON.stringify(v));
+        }
+      }
+      
+      output.push('');
+      output.push('=== ALL FIELD NAMES ===');
+      output.push(Object.keys(o).join(', '));
+      
+      // Also get all-info for this order
+      output.push('');
+      output.push('=== /all-info EXPEDITOR FIELDS ===');
+      try {
+        const allRes = await fetch(`${BASE}/api/orders/${o.id}/all-info`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const allData = await allRes.json();
+        const info = allData.data || allData;
         
-        // Show all fields that have numeric values or contain 'freight','cost','price','rate','amount'
-        for (const [k, v] of Object.entries(order)) {
-          if (typeof v === 'number' || (typeof v === 'string' && !isNaN(v) && v !== '' && v.length < 20)) {
-            output.push(`  ${k}: ${v}`);
-          }
-          if (typeof k === 'string' && (k.includes('freight') || k.includes('cost') || k.includes('price') || k.includes('rate') || k.includes('amount') || k.includes('profit') || k.includes('margin') || k.includes('sum') || k.includes('total') || k.includes('client') || k.includes('base'))) {
-            output.push(`  ${k}: ${JSON.stringify(v)}`);
+        for (const [k, v] of Object.entries(info)) {
+          const kl = k.toLowerCase();
+          if (kl.includes('expedi') || kl.includes('logist') || kl.includes('forward') || 
+              kl.includes('user') || kl.includes('manager') || kl.includes('person') ||
+              kl.includes('agent') || kl.includes('responsible') || kl.includes('assign') ||
+              kl.includes('trip') || kl.includes('additional')) {
+            output.push('  ' + k + ': ' + JSON.stringify(v).substring(0, 300));
           }
         }
-        
-        output.push('');
-        
-        // Also get all-info
-        output.push(`=== ${target} - /all-info ===`);
-        try {
-          const allRes = await fetch(`${BASE}/api/orders/${order.id}/all-info`, {
-            headers: { 'Authorization': 'Bearer ' + token }
-          });
-          const allData = await allRes.json();
-          const info = allData.data || allData;
-          
-          // Show all numeric/financial fields
-          for (const [k, v] of Object.entries(info)) {
-            if (typeof v === 'number' || (typeof k === 'string' && (k.includes('freight') || k.includes('cost') || k.includes('price') || k.includes('rate') || k.includes('amount') || k.includes('profit') || k.includes('margin') || k.includes('sum') || k.includes('total') || k.includes('base') || k.includes('client')))) {
-              output.push(`  ${k}: ${JSON.stringify(v)}`);
-            }
-          }
-        } catch(e) {
-          output.push('  all-info error: ' + e.message);
-        }
-        output.push('');
-      } else {
-        output.push(`=== ${target}: NOT FOUND ===`);
+      } catch(e) {
+        output.push('  all-info error: ' + e.message);
       }
     }
 
     res.send('<pre style="font-size:12px;background:#111;color:#0f0;padding:20px;white-space:pre-wrap;line-height:1.6;">' + output.join('\n') + '</pre>');
   } catch (e) {
-    res.send('<pre>Error: ' + e.message + '\n' + e.stack + '</pre>');
+    res.send('<pre>Error: ' + e.message + '</pre>');
   }
 });
 
