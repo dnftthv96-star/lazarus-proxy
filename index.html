@@ -277,9 +277,9 @@ function renderDashboard(orders,df,dt){
   let totalFr=0,totalEx=0,totalPr=0;
   const mgrMap={},cliMap={},stMap={},dayMap={};
   orders.forEach(o=>{
-    const fr=parseFloat(o.freight||0);
     const ex=parseFloat(o.cost||0);
     const pr=parseFloat(o.profit||0);
+    const fr=pr+ex; // Фрахт = Прибыль + Расходы (matches 4logist)
     const mgrName=getUserName(o.user_id||o.logistician_id);
     const cliName=getClientName(o.client_id);
     const stObj=o.status;
