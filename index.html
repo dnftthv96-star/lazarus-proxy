@@ -156,12 +156,22 @@ function loadData(){
       });
     }
     return loadPage().then(function(){
-      // Filter by date only (no L-code filter - some orders have external IDs)
+      // Filter by date - check ALL date fields, include if ANY matches
       var orders=allOrders.filter(function(o){
-        var raw=String(o.freight_date||o.created||'');
-        if(!raw||raw==='null'||raw.length<10) return false;
-        var oDate=raw.slice(0,10);
-        return oDate>=df && oDate<=dt;
+        var dates=[
+          String(o.freight_date||''),
+          String(o.created||''),
+          String(o.createdAt||''),
+          String(o.statusDate||'')
+        ];
+        for(var i=0;i<dates.length;i++){
+          var raw=dates[i];
+          if(raw&&raw!=='null'&&raw.length>=10){
+            var oDate=raw.slice(0,10);
+            if(oDate>=df && oDate<=dt) return true;
+          }
+        }
+        return false;
       });
       console.log('API:',allOrders.length,'-> filtered:',orders.length,'for',df,'to',dt);
       renderDashboard(orders,df,dt);
