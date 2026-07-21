@@ -28,100 +28,64 @@ app.get('/debug', async (req, res) => {
     if (!tokenData.access_token) return res.send('<pre>Auth failed</pre>');
     const token = tokenData.access_token;
 
-    async function tryFilter(label, contentType, body) {
-      try {
-        const r = await fetch(`${BASE}/api/orders/list`, {
-          method: 'POST',
-          headers: { 'Content-Type': contentType, 'Authorization': 'Bearer ' + token },
-          body: body
-        });
-        const d = await r.json();
-        const orders = d.data || d || [];
-        const count = Array.isArray(orders) ? orders.length : '?';
-        const total = d.dataInfo ? d.dataInfo.amountItems : '?';
-        return `${label}: ${count} on page, ${total} total`;
-      } catch(e) {
-        return `${label}: ERROR - ${e.message}`;
-      }
-    }
+    const output = [];
 
-    const results = [];
+    // Load July orders
+    const ordRes = await fetch(`${BASE}/api/orders/list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({form_order_api_filter:{dateFrom:'2026-07-01',dateTo:'2026-07-16'},perPage:500})
+    });
+    const ordData = await ordRes.json();
+    const orders = ordData.data || [];
+
+    // Find L01747 and L01746
+    const targets = ['L01747','L01746','L01748','L01733'];
     
-    // Try form-urlencoded with Symfony format
-    results.push(await tryFilter(
-      '1. form-urlencoded + YYYY-MM-DD',
-      'application/x-www-form-urlencoded',
-      'form_order_api_filter[dateFrom]=2026-07-01&form_order_api_filter[dateTo]=2026-07-16&perPage=5'
-    ));
-
-    results.push(await tryFilter(
-      '2. form-urlencoded + DD.MM.YYYY',
-      'application/x-www-form-urlencoded',
-      'form_order_api_filter[dateFrom]=01.07.2026&form_order_api_filter[dateTo]=16.07.2026&perPage=5'
-    ));
-
-    results.push(await tryFilter(
-      '3. JSON nested object',
-      'application/json',
-      JSON.stringify({form_order_api_filter:{dateFrom:'2026-07-01',dateTo:'2026-07-16'},perPage:5})
-    ));
-
-    results.push(await tryFilter(
-      '4. JSON nested DD.MM.YYYY',
-      'application/json',
-      JSON.stringify({form_order_api_filter:{dateFrom:'01.07.2026',dateTo:'16.07.2026'},perPage:5})
-    ));
-
-    results.push(await tryFilter(
-      '5. JSON flat brackets YYYY-MM-DD',
-      'application/json',
-      JSON.stringify({'form_order_api_filter[dateFrom]':'2026-07-01','form_order_api_filter[dateTo]':'2026-07-16',perPage:5})
-    ));
-
-    results.push(await tryFilter(
-      '6. JSON flat brackets DD.MM.YYYY',
-      'application/json',
-      JSON.stringify({'form_order_api_filter[dateFrom]':'01.07.2026','form_order_api_filter[dateTo]':'16.07.2026',perPage:5})
-    ));
-
-    results.push(await tryFilter(
-      '7. form-urlencoded loadingDate',
-      'application/x-www-form-urlencoded',
-      'form_order_api_filter[loadingDate]=2026-07-01&form_order_api_filter[unloadingDate]=2026-07-16&perPage=5'
-    ));
-
-    results.push(await tryFilter(
-      '8. No filter baseline',
-      'application/json',
-      JSON.stringify({perPage:5})
-    ));
-
-    // Also check user 31
-    results.push('');
-    results.push('=== USER 31 CHECK ===');
-    try {
-      const u31 = await fetch(`${BASE}/api/users/list`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({perPage:500,page:0})
-      });
-      const u31data = await u31.json();
-      const users = u31data.data || u31data || [];
-      const total_users = u31data.dataInfo ? u31data.dataInfo.amountItems : '?';
-      results.push('Total users: ' + total_users + ', loaded: ' + (Array.isArray(users)?users.length:'?'));
-      if (Array.isArray(users)) {
-        const user31 = users.find(u => u.id === 31);
-        results.push('User 31: ' + (user31 ? JSON.stringify(user31).substring(0,300) : 'NOT FOUND in loaded page'));
-        results.push('All user IDs: ' + users.map(u=>u.id+':'+u.name).join(', '));
+    for (const target of targets) {
+      const order = orders.find(o => (o.order_code_referral || o.order_code) === target);
+      if (order) {
+        output.push(`=== ${target} (id: ${order.id}) - ALL NUMERIC FIELDS ===`);
+        
+        // Show all fields that have numeric values or contain 'freight','cost','price','rate','amount'
+        for (const [k, v] of Object.entries(order)) {
+          if (typeof v === 'number' || (typeof v === 'string' && !isNaN(v) && v !== '' && v.length < 20)) {
+            output.push(`  ${k}: ${v}`);
+          }
+          if (typeof k === 'string' && (k.includes('freight') || k.includes('cost') || k.includes('price') || k.includes('rate') || k.includes('amount') || k.includes('profit') || k.includes('margin') || k.includes('sum') || k.includes('total') || k.includes('client') || k.includes('base'))) {
+            output.push(`  ${k}: ${JSON.stringify(v)}`);
+          }
+        }
+        
+        output.push('');
+        
+        // Also get all-info
+        output.push(`=== ${target} - /all-info ===`);
+        try {
+          const allRes = await fetch(`${BASE}/api/orders/${order.id}/all-info`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          const allData = await allRes.json();
+          const info = allData.data || allData;
+          
+          // Show all numeric/financial fields
+          for (const [k, v] of Object.entries(info)) {
+            if (typeof v === 'number' || (typeof k === 'string' && (k.includes('freight') || k.includes('cost') || k.includes('price') || k.includes('rate') || k.includes('amount') || k.includes('profit') || k.includes('margin') || k.includes('sum') || k.includes('total') || k.includes('base') || k.includes('client')))) {
+              output.push(`  ${k}: ${JSON.stringify(v)}`);
+            }
+          }
+        } catch(e) {
+          output.push('  all-info error: ' + e.message);
+        }
+        output.push('');
+      } else {
+        output.push(`=== ${target}: NOT FOUND ===`);
       }
-    } catch(e) {
-      results.push('User check error: ' + e.message);
     }
 
-    res.send('<pre style="font-size:13px;background:#111;color:#0f0;padding:20px;white-space:pre-wrap;line-height:2;">' + results.join('\n') + '</pre>');
-
+    res.send('<pre style="font-size:12px;background:#111;color:#0f0;padding:20px;white-space:pre-wrap;line-height:1.6;">' + output.join('\n') + '</pre>');
   } catch (e) {
-    res.send('<pre>Error: ' + e.message + '</pre>');
+    res.send('<pre>Error: ' + e.message + '\n' + e.stack + '</pre>');
   }
 });
 
@@ -141,7 +105,7 @@ app.all('/proxy/*', async (req, res) => {
     const text = await r.text();
     res.status(r.status);
     r.headers.forEach((v, k) => {
-      if (!['content-encoding', 'transfer-encoding', 'connection'].includes(k)) res.setHeader(k, v);
+      if (!['content-encoding','transfer-encoding','connection'].includes(k)) res.setHeader(k, v);
     });
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(text);
