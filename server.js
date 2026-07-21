@@ -14,10 +14,10 @@ app.get('/debug', async (req, res) => {
   try {
     const fs = require('fs');
     const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-    const cid = html.match(/const CLIENT_ID\s*=\s*'([^']+)'/)[1];
-    const cs  = html.match(/const CLIENT_SECRET\s*=\s*'([^']+)'/)[1];
-    const un  = html.match(/const USERNAME\s*=\s*'([^']+)'/)[1];
-    const pw  = html.match(/const PASSWORD\s*=\s*'([^']+)'/)[1];
+    const cid = html.match(/(?:const|var)\s+CLIENT_ID\s*=\s*'([^']+)'/)[1];
+    const cs  = html.match(/(?:const|var)\s+CLIENT_SECRET\s*=\s*'([^']+)'/)[1];
+    const un  = html.match(/(?:const|var)\s+USERNAME\s*=\s*'([^']+)'/)[1];
+    const pw  = html.match(/(?:const|var)\s+PASSWORD\s*=\s*'([^']+)'/)[1];
 
     const tokenRes = await fetch(`${BASE}/oauth/v2/token`, {
       method: 'POST',
