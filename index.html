@@ -192,7 +192,7 @@ function renderDashboard(orders,df,dt){
   var d2=new Date(dt).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric'});
   document.getElementById('period-label').textContent=d1+' \u2014 '+d2;
   var totalFr=0,totalEx=0,totalPr=0;
-  var mgrMap={},cliMap={},stMap={},dayMap={};
+  var mgrMap={},cliMap={},stMap={},dayMap={},expMap={};
   orders.forEach(function(o){
     var ex=parseFloat(o.cost||0);
     var pr=parseFloat(o.profit||0);
