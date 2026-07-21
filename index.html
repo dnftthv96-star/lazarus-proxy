@@ -207,7 +207,7 @@ function renderDashboard(orders,df,dt){
     if(!mgrMap[mgrName])mgrMap[mgrName]={n:0,fr:0,pr:0,ex:0};mgrMap[mgrName].n++;mgrMap[mgrName].fr+=fr;mgrMap[mgrName].pr+=pr;mgrMap[mgrName].ex+=ex;
     if(!cliMap[cliName])cliMap[cliName]={n:0,fr:0,pr:0};cliMap[cliName].n++;cliMap[cliName].fr+=fr;cliMap[cliName].pr+=pr;
     stMap[stName]=(stMap[stName]||0)+1;
-    var expName=getUserName(o.logistician_id);
+    var expName=o.logistician_id?getUserName(o.logistician_id):'Не назначен';
     if(!expMap[expName])expMap[expName]={n:0};
     expMap[expName].n++;
     if(!dayMap[day])dayMap[day]={fr:0,ex:0,pr:0};dayMap[day].fr+=fr;dayMap[day].ex+=ex;dayMap[day].pr+=pr;
