@@ -156,14 +156,8 @@ function loadData(){
       });
     }
     return loadPage().then(function(){
-      // FILTER 1: Only L-code orders
+      // Filter by date only (no L-code filter - some orders have external IDs)
       var orders=allOrders.filter(function(o){
-        var code=String(o.order_code_referral||o.order_code||'');
-        if(code.length>0 && code.charAt(0)!=='L') return false;
-        return true;
-      });
-      // FILTER 2: Strict date range
-      orders=orders.filter(function(o){
         var raw=String(o.freight_date||o.created||'');
         if(!raw||raw==='null'||raw.length<10) return false;
         var oDate=raw.slice(0,10);
@@ -223,7 +217,7 @@ function renderDashboard(orders,df,dt){
     var stObj2=o.status;var stName2=(stObj2&&typeof stObj2==='object')?(stObj2.name||'\u2014'):String(stObj2||'\u2014');
     var stLow=stName2.toLowerCase();
     var sc=stLow.indexOf('last')>=0?'sls':stLow.indexOf('work')>=0?'siw':(stLow.indexOf('order')>=0||stLow.indexOf('sched')>=0)?'sos':(stLow.indexOf('deliver')>=0||stLow.indexOf('finish')>=0)?'sdl':'siw';
-    var code=o.order_code_referral||o.order_code||o.id;
+    var oc=o.order_code||'';var ocr=o.order_code_referral||'';var code=(ocr.charAt(0)==='L'?ocr:oc.charAt(0)==='L'?oc:'L0'+o.id);
     return '<tr><td class="ono">'+code+'</td><td><div class="ocl">'+getClientName(o.client_id).slice(0,25)+'</div></td><td class="osb">'+getUserName(o.user_id||o.logistician_id)+'</td><td><span class="sb '+sc+'">'+stName2+'</span></td><td class="r ofr">'+eur(fr2)+'</td><td class="r osb">'+eur(ex2)+'</td><td class="r opr">'+eur(pr2)+'</td></tr>';
   }).join('')+(orders.length>50?'<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:10px;font-size:11px">... ещё '+(orders.length-50)+' заказов</td></tr>':'')+'</tbody></table>';
   var days=Object.keys(dayMap).sort(function(a,b){return (+a)-(+b);});
