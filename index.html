@@ -7,32 +7,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{--bg:#0b1120;--bg2:#0f1829;--card:#111d32;--border:#1e2f4a;--border2:#253857;--ink:#dde5f2;--ink2:#8fa3bf;--mut:#4d6280;--green:#00e5a0;--gd:rgba(0,229,160,.13);--blue:#3d9eff;--bd:rgba(61,158,255,.13);--purple:#a78bfa;--pd:rgba(167,139,250,.13);--orange:#ffac45;--od:rgba(255,172,69,.13);--red:#ff5e6c;--rd:rgba(255,94,108,.13);}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45;padding:16px 0 60px;}
-.page{max-width:1000px;margin:0 auto;padding:0 16px;}
-.topbar{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 20px;margin-bottom:12px;position:relative;overflow:hidden;}.topbar::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),var(--blue),var(--purple),var(--orange));}
-.tb-logo{width:40px;height:40px;border-radius:10px;flex:none;background:var(--gd);border:1px solid rgba(0,229,160,.3);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:19px;color:var(--green);}
-.tb-t{flex:1;}.tb-t b{font-size:15px;font-weight:800;display:block;}.tb-t span{font-size:11px;color:var(--mut);}
-.controls{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px 16px;margin-bottom:12px;flex-wrap:wrap;}
-.ctrl-group{display:flex;align-items:center;gap:8px;}.ctrl-label{font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
-.ctrl-input{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:7px 11px;color:var(--ink);font-size:12.5px;outline:none;font-family:inherit;}
-.ctrl-btn{background:var(--green);border:none;border-radius:8px;padding:8px 18px;color:#0b1120;font-size:13px;font-weight:800;cursor:pointer;}.ctrl-btn:disabled{opacity:.4;cursor:not-allowed;}
-.ctrl-sep{width:1px;height:28px;background:var(--border2);margin:0 4px;}
-.quick-btn{cursor:pointer;background:var(--bg2);border:1px solid var(--border2);color:var(--ink2);border-radius:8px;padding:6px 12px;font-size:11.5px;font-family:inherit;}.quick-btn:hover{border-color:var(--green);color:var(--green);}
-.status-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:12px;}.status-bar.loading{background:var(--bd);color:var(--blue);}.status-bar.success{background:var(--gd);color:var(--green);}.status-bar.error{background:var(--rd);color:var(--red);}.status-bar.hidden{display:none;}
-.spin{display:inline-block;animation:spin .8s linear infinite;}@keyframes spin{to{transform:rotate(360deg)}}
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
-.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 14px 13px;}
-.kv{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;}.kl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin-top:6px;}.kd{font-size:10.5px;font-weight:700;margin-top:5px;}.up{color:var(--green)!important;}.dn{color:var(--red)!important;}
+*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45;padding:16px 0 60px;}.page{max-width:1000px;margin:0 auto;padding:0 16px;}
+.topbar{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 20px;margin-bottom:12px;position:relative;overflow:hidden;}.topbar::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),var(--blue),var(--purple),var(--orange));}.tb-logo{width:40px;height:40px;border-radius:10px;flex:none;background:var(--gd);border:1px solid rgba(0,229,160,.3);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:19px;color:var(--green);}.tb-t{flex:1;}.tb-t b{font-size:15px;font-weight:800;display:block;}.tb-t span{font-size:11px;color:var(--mut);}
+.controls{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px 16px;margin-bottom:12px;flex-wrap:wrap;}.ctrl-group{display:flex;align-items:center;gap:8px;}.ctrl-label{font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}.ctrl-input{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:7px 11px;color:var(--ink);font-size:12.5px;outline:none;font-family:inherit;}.ctrl-btn{background:var(--green);border:none;border-radius:8px;padding:8px 18px;color:#0b1120;font-size:13px;font-weight:800;cursor:pointer;}.ctrl-btn:disabled{opacity:.4;cursor:not-allowed;}.ctrl-sep{width:1px;height:28px;background:var(--border2);margin:0 4px;}.quick-btn{cursor:pointer;background:var(--bg2);border:1px solid var(--border2);color:var(--ink2);border-radius:8px;padding:6px 12px;font-size:11.5px;font-family:inherit;}.quick-btn:hover{border-color:var(--green);color:var(--green);}
+.status-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:12px;}.status-bar.loading{background:var(--bd);color:var(--blue);}.status-bar.success{background:var(--gd);color:var(--green);}.status-bar.error{background:var(--rd);color:var(--red);}.status-bar.hidden{display:none;}.spin{display:inline-block;animation:spin .8s linear infinite;}@keyframes spin{to{transform:rotate(360deg)}}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 14px 13px;}.kv{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;}.kl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin-top:6px;}.kd{font-size:10.5px;font-weight:700;margin-top:5px;}.up{color:var(--green)!important;}.dn{color:var(--red)!important;}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;}.g21{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:10px;}
-.card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 17px 14px;}
-.ch{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);display:flex;align-items:center;gap:6px;margin-bottom:14px;}
-.dot{width:6px;height:6px;border-radius:50%;flex:none;}.dg{background:var(--green);box-shadow:0 0 6px var(--green);}.db{background:var(--blue);box-shadow:0 0 6px var(--blue);}.do{background:var(--orange);box-shadow:0 0 6px var(--orange);}.dp{background:var(--purple);box-shadow:0 0 6px var(--purple);}.dr{background:var(--red);box-shadow:0 0 6px var(--red);}
-.pills{display:flex;gap:7px;flex-wrap:wrap;}.pill{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:700;border:1px solid;}.pdot{width:6px;height:6px;border-radius:50%;flex:none;}.pill .pc{font-size:15px;font-weight:900;margin-left:2px;}
-.piw{background:var(--bd);border-color:rgba(61,158,255,.25);color:var(--blue);}.piw .pdot{background:var(--blue);}.pos{background:var(--od);border-color:rgba(255,172,69,.25);color:var(--orange);}.pos .pdot{background:var(--orange);}.pdl{background:var(--gd);border-color:rgba(0,229,160,.25);color:var(--green);}.pdl .pdot{background:var(--green);}.pls{background:var(--pd);border-color:rgba(167,139,250,.25);color:var(--purple);}.pls .pdot{background:var(--purple);}
+.card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 17px 14px;}.ch{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);display:flex;align-items:center;gap:6px;margin-bottom:14px;}.dot{width:6px;height:6px;border-radius:50%;flex:none;}.dg{background:var(--green);box-shadow:0 0 6px var(--green);}.db{background:var(--blue);box-shadow:0 0 6px var(--blue);}.do{background:var(--orange);box-shadow:0 0 6px var(--orange);}.dp{background:var(--purple);box-shadow:0 0 6px var(--purple);}.dr{background:var(--red);box-shadow:0 0 6px var(--red);}
+.pills{display:flex;gap:7px;flex-wrap:wrap;}.pill{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:700;border:1px solid;}.pdot{width:6px;height:6px;border-radius:50%;flex:none;}.pill .pc{font-size:15px;font-weight:900;margin-left:2px;}.piw{background:var(--bd);border-color:rgba(61,158,255,.25);color:var(--blue);}.piw .pdot{background:var(--blue);}.pos{background:var(--od);border-color:rgba(255,172,69,.25);color:var(--orange);}.pos .pdot{background:var(--orange);}.pdl{background:var(--gd);border-color:rgba(0,229,160,.25);color:var(--green);}.pdl .pdot{background:var(--green);}.pls{background:var(--pd);border-color:rgba(167,139,250,.25);color:var(--purple);}.pls .pdot{background:var(--purple);}
 .utbl{width:100%;border-collapse:collapse;font-size:12.5px;}.utbl th{padding:8px 10px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);border-bottom:1px solid var(--border2);text-align:right;}.utbl th:first-child{text-align:left;}.utbl td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;color:var(--ink2);}.utbl td:first-child{text-align:left;color:var(--ink);font-weight:600;}.utbl tr:last-child td{border-bottom:none;}.utbl .tot td{font-weight:800;color:var(--ink);border-top:1px solid var(--border2);border-bottom:none;}.pr-g{color:var(--green);font-weight:800;}
-.ord-tbl{width:100%;border-collapse:collapse;font-size:11.5px;}.ord-tbl th{padding:6px 7px;text-align:left;font-size:8.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--mut);border-bottom:1px solid var(--border2);white-space:nowrap;}.ord-tbl th.r{text-align:right;}.ord-tbl td{padding:8px 7px;border-bottom:1px solid var(--border);vertical-align:middle;}.ord-tbl td.r{text-align:right;font-variant-numeric:tabular-nums;}.ord-tbl tr:last-child td{border-bottom:none;}
-.ono{font-weight:800;color:var(--blue);font-size:10.5px;font-family:monospace;}.ocl{font-weight:700;color:var(--ink);font-size:12px;}.osb{font-size:10px;color:var(--mut);}.ofr{font-weight:700;color:var(--ink2);}.opr{font-weight:800;color:var(--green);}
+.ord-tbl{width:100%;border-collapse:collapse;font-size:11.5px;}.ord-tbl th{padding:6px 7px;text-align:left;font-size:8.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--mut);border-bottom:1px solid var(--border2);white-space:nowrap;}.ord-tbl th.r{text-align:right;}.ord-tbl td{padding:8px 7px;border-bottom:1px solid var(--border);vertical-align:middle;}.ord-tbl td.r{text-align:right;font-variant-numeric:tabular-nums;}.ord-tbl tr:last-child td{border-bottom:none;}.ono{font-weight:800;color:var(--blue);font-size:10.5px;font-family:monospace;}.ocl{font-weight:700;color:var(--ink);font-size:12px;}.osb{font-size:10px;color:var(--mut);}.ofr{font-weight:700;color:var(--ink2);}.opr{font-weight:800;color:var(--green);}
 .sb{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9.5px;font-weight:800;white-space:nowrap;border:1px solid;}.siw{background:var(--bd);color:var(--blue);border-color:rgba(61,158,255,.3);}.sos{background:var(--od);color:var(--orange);border-color:rgba(255,172,69,.3);}.sdl{background:var(--gd);color:var(--green);border-color:rgba(0,229,160,.3);}.sls{background:var(--pd);color:var(--purple);border-color:rgba(167,139,250,.3);}
 .block{margin-bottom:22px;}.block-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;}.block-num{width:26px;height:26px;border-radius:50%;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:var(--green);flex:none;}.block-title{font-size:13px;font-weight:800;color:var(--ink);}.block-sub{font-size:11px;color:var(--mut);margin-left:auto;}
 .chart-box{position:relative;width:100%;}.empty-state{text-align:center;padding:40px 20px;color:var(--mut);font-size:13px;}.foot{font-size:10px;color:var(--mut);text-align:center;margin-top:24px;line-height:1.6;}
@@ -48,17 +32,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 <div style="font-size:12px;color:#4d6280;margin-bottom:22px;">Введите пароль для доступа к отчёту</div>
 <input type="password" id="gate-input" placeholder="Пароль" style="width:100%;background:#0f1829;border:1px solid #253857;border-radius:9px;padding:11px 14px;color:#dde5f2;font-size:14px;outline:none;font-family:inherit;text-align:center;letter-spacing:2px;" onkeydown="if(event.key==='Enter')checkPass()">
 <div id="gate-error" style="color:#ff5e6c;font-size:11.5px;margin-top:10px;height:14px;font-weight:600;"></div>
-<button onclick="checkPass()" style="width:100%;background:#00e5a0;border:none;border-radius:9px;padding:11px;color:#0b1120;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px;">Войти</button>
-</div></div>
+<button onclick="checkPass()" style="width:100%;background:#00e5a0;border:none;border-radius:9px;padding:11px;color:#0b1120;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px;">Войти</button></div></div>
 <div class="page">
 <div class="topbar"><div class="tb-logo">L</div><div class="tb-t"><b>Lazarus Forwarding</b><span>Живой дашборд · данные из 4logist</span></div><div style="font-size:11px;color:var(--mut);text-align:right;"><span id="last-update">Не обновлялся</span></div></div>
-<div class="controls">
-<div class="ctrl-group"><span class="ctrl-label">Период</span><input type="date" id="date-from" class="ctrl-input"><span style="color:var(--mut);font-size:12px;">—</span><input type="date" id="date-to" class="ctrl-input"></div>
-<div class="ctrl-sep"></div>
-<div class="ctrl-group"><span class="ctrl-label">Быстро</span><button class="quick-btn" onclick="setWeek()">Эта неделя</button><button class="quick-btn" onclick="setMonth()">Этот месяц</button><button class="quick-btn" onclick="setPrevWeek()">Прошлая нед.</button></div>
-<div class="ctrl-sep"></div>
-<button class="ctrl-btn" id="load-btn" onclick="loadData()">⟳ Загрузить</button>
-</div>
+<div class="controls"><div class="ctrl-group"><span class="ctrl-label">Период</span><input type="date" id="date-from" class="ctrl-input"><span style="color:var(--mut);font-size:12px;">—</span><input type="date" id="date-to" class="ctrl-input"></div><div class="ctrl-sep"></div><div class="ctrl-group"><span class="ctrl-label">Быстро</span><button class="quick-btn" onclick="setWeek()">Эта неделя</button><button class="quick-btn" onclick="setMonth()">Этот месяц</button><button class="quick-btn" onclick="setPrevWeek()">Прошлая нед.</button></div><div class="ctrl-sep"></div><button class="ctrl-btn" id="load-btn" onclick="loadData()">⟳ Загрузить</button></div>
 <div class="status-bar hidden" id="status-bar"><span id="status-icon"></span><span id="status-text"></span></div>
 <div id="content" style="display:none;">
 <div class="block"><div class="block-hdr"><div class="block-num">1</div><div class="block-title">Текущий период</div><div class="block-sub" id="period-label"></div></div>
@@ -66,126 +43,42 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 <div class="g21" style="margin-bottom:10px;"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры</div><div id="mgr-table"></div></div><div class="card"><div class="ch"><span class="dot dp"></span>Экспедиторы</div><div id="exp-table"></div></div></div>
 <div class="card" style="margin-bottom:10px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);">Статусы:</span><div id="status-pills" class="pills" style="display:inline-flex;"></div></div></div>
 <div class="card" style="overflow-x:auto;margin-bottom:10px;"><div class="ch"><span class="dot db"></span>Заказы периода</div><div id="orders-table"></div></div></div>
-<div class="block"><div class="block-hdr"><div class="block-num">2</div><div class="block-title">Динамика по дням</div></div>
-<div class="g3"><div class="card"><div class="ch"><span class="dot db"></span>Фрахт</div><div class="chart-box" style="height:150px;"><canvas id="freightChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot dr"></span>Расходы</div><div class="chart-box" style="height:150px;"><canvas id="expChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot dg"></span>Прибыль</div><div class="chart-box" style="height:150px;"><canvas id="profitChart"></canvas></div></div></div></div>
-<div class="block"><div class="block-hdr"><div class="block-num">3</div><div class="block-title">Аналитика</div></div>
-<div class="g2"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры · фрахт vs прибыль</div><div class="chart-box" style="height:180px;"><canvas id="mgrChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot do"></span>Клиенты · топ по прибыли</div><div id="cli-table"></div></div></div></div>
+<div class="block"><div class="block-hdr"><div class="block-num">2</div><div class="block-title">Динамика по дням</div></div><div class="g3"><div class="card"><div class="ch"><span class="dot db"></span>Фрахт</div><div class="chart-box" style="height:150px;"><canvas id="freightChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot dr"></span>Расходы</div><div class="chart-box" style="height:150px;"><canvas id="expChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot dg"></span>Прибыль</div><div class="chart-box" style="height:150px;"><canvas id="profitChart"></canvas></div></div></div></div>
+<div class="block"><div class="block-hdr"><div class="block-num">3</div><div class="block-title">Аналитика</div></div><div class="g2"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры · фрахт vs прибыль</div><div class="chart-box" style="height:180px;"><canvas id="mgrChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot do"></span>Клиенты · топ по прибыли</div><div id="cli-table"></div></div></div></div>
 </div>
 <div id="empty-state" class="card empty-state"><div style="font-size:32px;margin-bottom:10px;opacity:.5;">📊</div><div style="font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:6px;">Выберите период и нажмите «Загрузить»</div><div>Данные загружаются напрямую из 4logist</div></div>
 <div class="foot">Lazarus Forwarding · Живой дашборд · 4logist API</div>
 </div>
 <script>
-const DASHBOARD_PASSWORD='5858';
+var DASHBOARD_PASSWORD='5858';
 function checkPass(){if(document.getElementById('gate-input').value===DASHBOARD_PASSWORD){sessionStorage.setItem('lz-auth','1');document.getElementById('login-gate').style.display='none';document.querySelector('.page').style.display='block';}else{document.getElementById('gate-error').textContent='Неверный пароль';document.getElementById('gate-input').value='';}}
 window.addEventListener('DOMContentLoaded',function(){if(sessionStorage.getItem('lz-auth')==='1'){document.getElementById('login-gate').style.display='none';}else{document.querySelector('.page').style.display='none';setTimeout(function(){document.getElementById('gate-input').focus()},100);}});
 </script>
 <script>
-// ══════ CONFIG — ВПИШИТЕ СВОИ ДАННЫЕ ══════
 var CLIENT_ID     = '1bjgh8arbb1coccosockkkc4sskwoc4gos8koggos04kc0w484';
 var CLIENT_SECRET = '65uax2lgcko48cwkg4c00cg080g8ks8484wc4k04ssgoksk0sg';
-var USERNAME      = 'Artjom_H';   // ← ваш логин от 4logist
-var PASSWORD      = 'LazarusAH2025';  // ← ваш пароль от 4logist
-// ══════════════════════════════════════════
+var USERNAME      = 'Artjom_H';
+var PASSWORD      = 'LazarusAH2025';
 
 var G='#00e5a0',B='#3d9eff',P='#a78bfa',O='#ffac45',R='#ff5e6c';
 var TIP={backgroundColor:'#111d32',borderColor:'#253857',borderWidth:1,titleColor:'#8fa3bf',bodyColor:'#dde5f2',padding:10};
 Chart.defaults.color='#4d6280';Chart.defaults.font.size=10;
 var token=null,charts={},usersMap={},clientsMap={};
 function eur(v){return '\u20AC'+Math.round(v).toLocaleString('ru');}
-
 function setWeek(){var n=new Date(),d=n.getDay()||7,m=new Date(n);m.setDate(n.getDate()-d+1);var s=new Date(m);s.setDate(m.getDate()+6);document.getElementById('date-from').value=m.toISOString().slice(0,10);document.getElementById('date-to').value=s.toISOString().slice(0,10);}
 function setPrevWeek(){var n=new Date(),d=n.getDay()||7,m=new Date(n);m.setDate(n.getDate()-d-6);var s=new Date(m);s.setDate(m.getDate()+6);document.getElementById('date-from').value=m.toISOString().slice(0,10);document.getElementById('date-to').value=s.toISOString().slice(0,10);}
 function setMonth(){var n=new Date();document.getElementById('date-from').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-01';document.getElementById('date-to').value=n.toISOString().slice(0,10);}
-
 function setStatus(type,text){var bar=document.getElementById('status-bar');document.getElementById('status-text').textContent=text;bar.className='status-bar '+type;var icon=document.getElementById('status-icon');icon.textContent=type==='loading'?'\u27F3':type==='success'?'\u2713':'\u2715';icon.className=type==='loading'?'spin':'';if(type==='success')setTimeout(function(){bar.className='status-bar hidden';},4000);}
-
-function getToken(){
-  var body='grant_type=password&client_id='+CLIENT_ID+'&client_secret='+CLIENT_SECRET+'&username='+encodeURIComponent(USERNAME)+'&password='+encodeURIComponent(PASSWORD);
-  return fetch('/proxy/oauth/v2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body}).then(function(r){if(!r.ok)throw new Error('Auth:'+r.status);return r.json();}).then(function(d){if(!d.access_token)throw new Error('No token');token=d.access_token;return token;});
-}
-
-function apiPost(path,payload){
-  if(!token)return getToken().then(function(){return apiPost(path,payload);});
-  return fetch('/proxy/'+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(payload)}).then(function(r){if(r.status===401){token=null;return getToken().then(function(){return apiPost(path,payload);});}if(!r.ok)throw new Error('API '+path+':'+r.status);return r.json();});
-}
-
-function loadRefData(){
-  var uP=0,cP=0,allU=[],allC=[];
-  function loadUsers(){return apiPost('api/users/list',{perPage:200,page:uP}).then(function(r){var b=r.data||r||[];if(Array.isArray(b)&&b.length>0){allU=allU.concat(b);uP++;if(uP<10)return loadUsers();}allU.forEach(function(u){usersMap[u.id]=u.name||u.full_name||u.username||('User '+u.id);});usersMap[31]='Artjoms Hondozko';});}
-  function loadClients(){return apiPost('api/clients/list',{perPage:200,page:cP}).then(function(r){var b=r.data||r||[];if(Array.isArray(b)&&b.length>0){allC=allC.concat(b);cP++;if(cP<10)return loadClients();}allC.forEach(function(c){clientsMap[c.id]=c.company_name||c.company_name_original||c.short_name||c.name||('Client '+c.id);});});}
-  return Promise.all([loadUsers(),loadClients()]).catch(function(e){console.warn('Ref error:',e);});
-}
-
+function getToken(){var body='grant_type=password&client_id='+CLIENT_ID+'&client_secret='+CLIENT_SECRET+'&username='+encodeURIComponent(USERNAME)+'&password='+encodeURIComponent(PASSWORD);return fetch('/proxy/oauth/v2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body}).then(function(r){if(!r.ok)throw new Error('Auth:'+r.status);return r.json();}).then(function(d){if(!d.access_token)throw new Error('No token');token=d.access_token;return token;});}
+function apiPost(path,payload){if(!token)return getToken().then(function(){return apiPost(path,payload);});return fetch('/proxy/'+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(payload)}).then(function(r){if(r.status===401){token=null;return getToken().then(function(){return apiPost(path,payload);});}if(!r.ok)throw new Error('API '+path+':'+r.status);return r.json();});}
+function loadRefData(){var uP=0,cP=0,allU=[],allC=[];function loadUsers(){return apiPost('api/users/list',{perPage:200,page:uP}).then(function(r){var b=r.data||r||[];if(Array.isArray(b)&&b.length>0){allU=allU.concat(b);uP++;if(uP<10)return loadUsers();}allU.forEach(function(u){usersMap[u.id]=u.name||u.full_name||u.username||('User '+u.id);});usersMap[31]='Artjoms Hondozko';});}function loadClients(){return apiPost('api/clients/list',{perPage:200,page:cP}).then(function(r){var b=r.data||r||[];if(Array.isArray(b)&&b.length>0){allC=allC.concat(b);cP++;if(cP<10)return loadClients();}allC.forEach(function(c){clientsMap[c.id]=c.company_name||c.company_name_original||c.short_name||c.name||('Client '+c.id);});});}return Promise.all([loadUsers(),loadClients()]).catch(function(e){console.warn('Ref error:',e);});}
 function getUserName(id){return usersMap[id]||(id==31?'Artjoms Hondozko':'User '+id);}
 function getClientName(id){return clientsMap[id]||('Client '+id);}
-
-function loadData(){
-  var df=document.getElementById('date-from').value;
-  var dt=document.getElementById('date-to').value;
-  if(!df||!dt){alert('Выберите период');return;}
-  var btn=document.getElementById('load-btn');
-  btn.disabled=true;
-  document.getElementById('content').style.display='none';
-  document.getElementById('empty-state').style.display='none';
-  setStatus('loading','Авторизация...');
-
-  getToken().then(function(){
-    setStatus('loading','Загружаем справочники...');
-    return loadRefData();
-  }).then(function(){
-    setStatus('loading','Загружаем заказы...');
-    // Extend dateTo by 1 day (API excludes last day)
-    var dtPlus=new Date(dt);
-    dtPlus.setDate(dtPlus.getDate()+1);
-    var dtExt=dtPlus.toISOString().slice(0,10);
-    
-    var allOrders=[],page=0,totalItems=9999;
-    function loadPage(){
-      setStatus('loading','Загружаем заказы... ('+allOrders.length+')');
-      return apiPost('api/orders/list',{
-        form_order_api_filter:{dateFrom:df,dateTo:dtExt},
-        perPage:500,
-        page:page
-      }).then(function(res){
-        var batch=res.data||[];
-        if(res.dataInfo&&res.dataInfo.amountItems)totalItems=res.dataInfo.amountItems;
-        if(Array.isArray(batch)&&batch.length>0){
-          allOrders=allOrders.concat(batch);
-          page++;
-          if(allOrders.length<totalItems&&page<20)return loadPage();
-        }
-      });
-    }
-    return loadPage().then(function(){
-      // Filter by date - check ALL date fields, include if ANY matches
-      var orders=allOrders.filter(function(o){
-        var dates=[
-          String(o.freight_date||''),
-          String(o.created||''),
-          String(o.createdAt||''),
-          String(o.statusDate||'')
-        ];
-        for(var i=0;i<dates.length;i++){
-          var raw=dates[i];
-          if(raw&&raw!=='null'&&raw.length>=10){
-            var oDate=raw.slice(0,10);
-            if(oDate>=df && oDate<=dt) return true;
-          }
-        }
-        return false;
-      });
-      console.log('API:',allOrders.length,'-> filtered:',orders.length,'for',df,'to',dt);
-      renderDashboard(orders,df,dt);
-      setStatus('success','Загружено '+orders.length+' заказов');
-      document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');
-      document.getElementById('content').style.display='block';
-    });
-  }).catch(function(e){
-    setStatus('error','Ошибка: '+e.message);
-    document.getElementById('empty-state').style.display='block';
-    document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';
-  }).finally(function(){btn.disabled=false;});
-}
+function getExpName(id){if(!id)return '\u2014';return usersMap[id]||(id==31?'Artjoms Hondozko':'User '+id);}
+function loadData(){var df=document.getElementById('date-from').value,dt=document.getElementById('date-to').value;if(!df||!dt){alert('Выберите период');return;}var btn=document.getElementById('load-btn');btn.disabled=true;document.getElementById('content').style.display='none';document.getElementById('empty-state').style.display='none';setStatus('loading','Авторизация...');
+getToken().then(function(){setStatus('loading','Загружаем справочники...');return loadRefData();}).then(function(){setStatus('loading','Загружаем заказы...');var allOrders=[],page=0,totalItems=9999;function loadPage(){setStatus('loading','Загружаем заказы... ('+allOrders.length+')');return apiPost('api/orders/list',{perPage:500,page:page}).then(function(res){var batch=res.data||[];if(res.dataInfo&&res.dataInfo.amountItems)totalItems=res.dataInfo.amountItems;if(Array.isArray(batch)&&batch.length>0){allOrders=allOrders.concat(batch);page++;if(allOrders.length<totalItems&&page<20)return loadPage();}});}
+return loadPage().then(function(){var orders=allOrders.filter(function(o){var dates=[String(o.freight_date||''),String(o.created||''),String(o.createdAt||''),String(o.statusDate||'')];for(var i=0;i<dates.length;i++){var raw=dates[i];if(raw&&raw!=='null'&&raw.length>=10){var oDate=raw.slice(0,10);if(oDate>=df&&oDate<=dt)return true;}}return false;});
+renderDashboard(orders,df,dt);setStatus('success','Загружено '+orders.length+' заказов');document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');document.getElementById('content').style.display='block';});}).catch(function(e){setStatus('error','Ошибка: '+e.message);document.getElementById('empty-state').style.display='block';document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';}).finally(function(){btn.disabled=false;});}
 
 function renderDashboard(orders,df,dt){
   var d1=new Date(df).toLocaleDateString('ru',{day:'numeric',month:'short'});
@@ -194,23 +87,18 @@ function renderDashboard(orders,df,dt){
   var totalFr=0,totalEx=0,totalPr=0;
   var mgrMap={},cliMap={},stMap={},dayMap={},expMap={};
   orders.forEach(function(o){
-    var ex=parseFloat(o.cost||0);
-    var pr=parseFloat(o.profit||0);
-    var fr=pr+ex;
+    var ex=parseFloat(o.cost||0),pr=parseFloat(o.profit||0),fr=pr+ex;
     var mgrName=getUserName(o.user_id||o.logistician_id);
     var cliName=getClientName(o.client_id);
-    var stObj=o.status;
-    var stName=(stObj&&typeof stObj==='object')?(stObj.name||'N/A'):String(stObj||'N/A');
-    var dateStr=String(o.freight_date||o.created||'');
-    var day=dateStr.slice(8,10)||'?';
+    var stObj=o.status;var stName=(stObj&&typeof stObj==='object')?(stObj.name||'N/A'):String(stObj||'N/A');
+    var dateStr=String(o.freight_date||o.created||'');var day=dateStr.slice(8,10)||'?';
+    var expName=o.logistician_id?getUserName(o.logistician_id):'\u041D\u0435 \u043D\u0430\u0437\u043D\u0430\u0447\u0435\u043D';
     totalFr+=fr;totalEx+=ex;totalPr+=pr;
     if(!mgrMap[mgrName])mgrMap[mgrName]={n:0,fr:0,pr:0,ex:0};mgrMap[mgrName].n++;mgrMap[mgrName].fr+=fr;mgrMap[mgrName].pr+=pr;mgrMap[mgrName].ex+=ex;
     if(!cliMap[cliName])cliMap[cliName]={n:0,fr:0,pr:0};cliMap[cliName].n++;cliMap[cliName].fr+=fr;cliMap[cliName].pr+=pr;
     stMap[stName]=(stMap[stName]||0)+1;
-    var expName=o.logistician_id?getUserName(o.logistician_id):'Не назначен';
-    if(!expMap[expName])expMap[expName]={n:0};
-    expMap[expName].n++;
     if(!dayMap[day])dayMap[day]={fr:0,ex:0,pr:0};dayMap[day].fr+=fr;dayMap[day].ex+=ex;dayMap[day].pr+=pr;
+    if(!expMap[expName])expMap[expName]={n:0};expMap[expName].n++;
   });
   var mg=totalFr>0?Math.round(totalPr/totalFr*1000)/10:0;
   document.getElementById('k-count').textContent=orders.length;
@@ -224,16 +112,29 @@ function renderDashboard(orders,df,dt){
   document.getElementById('k-margin-d').className='kd '+(mg>15?'up':'dn');
   var stCls={'In work':'piw','Ordered and scheduled':'pos','Ordered':'pos','Delivered':'pdl','Finished':'pdl','In work last step':'pls','IN WORK LAST STEP':'pls'};
   document.getElementById('status-pills').innerHTML=Object.entries(stMap).map(function(e){return '<div class="pill '+(stCls[e[0]]||'piw')+'"><span class="pdot"></span>'+e[0]+'<span class="pc">'+e[1]+'</span></div>';}).join('');
+  // Managers
   var ms=Object.entries(mgrMap).sort(function(a,b){return b[1].pr-a[1].pr;});
   document.getElementById('mgr-table').innerHTML='<table class="utbl"><thead><tr><th>Менеджер</th><th>Зак.</th><th>Фрахт</th><th>Расходы</th><th>Прибыль</th><th>Маржа</th></tr></thead><tbody>'+ms.map(function(e){var m=e[0],v=e[1];return '<tr><td>'+m+'</td><td style="text-align:right;font-weight:800;color:var(--ink)">'+v.n+'</td><td>'+eur(v.fr)+'</td><td>'+eur(v.ex)+'</td><td class="pr-g">'+eur(v.pr)+'</td><td>'+(v.fr>0?Math.round(v.pr/v.fr*100):0)+'%</td></tr>';}).join('')+'<tr class="tot"><td>Итого</td><td style="text-align:right">'+orders.length+'</td><td>'+eur(totalFr)+'</td><td>'+eur(totalEx)+'</td><td class="pr-g">'+eur(totalPr)+'</td><td>'+mg+'%</td></tr></tbody></table>';
-  document.getElementById('orders-table').innerHTML='<table class="ord-tbl"><thead><tr><th>№</th><th>Клиент</th><th>Менеджер</th><th>Экспедитор</th><th>Статус</th><th class="r">Фрахт</th><th class="r">Расходы</th><th class="r">Прибыль</th><th class="r">Маржа</th></tr></thead><tbody>'+orders.slice(0,50).map(function(o){
+  // Expeditors
+  var es=Object.entries(expMap).sort(function(a,b){return b[1].n-a[1].n;});
+  document.getElementById('exp-table').innerHTML='<table class="utbl"><thead><tr><th>Экспедитор</th><th>Заказов</th></tr></thead><tbody>'+es.map(function(e){return '<tr><td>'+e[0]+'</td><td style="text-align:right;font-weight:800;color:var(--ink)">'+e[1].n+'</td></tr>';}).join('')+'<tr class="tot"><td>Итого</td><td style="text-align:right">'+orders.length+'</td></tr></tbody></table>';
+  // Orders table with expeditor column
+  var ordRows=orders.slice(0,50).map(function(o){
     var ex2=parseFloat(o.cost||0),pr2=parseFloat(o.profit||0),fr2=pr2+ex2;
     var stObj2=o.status;var stName2=(stObj2&&typeof stObj2==='object')?(stObj2.name||'\u2014'):String(stObj2||'\u2014');
     var stLow=stName2.toLowerCase();
     var sc=stLow.indexOf('last')>=0?'sls':stLow.indexOf('work')>=0?'siw':(stLow.indexOf('order')>=0||stLow.indexOf('sched')>=0)?'sos':(stLow.indexOf('deliver')>=0||stLow.indexOf('finish')>=0)?'sdl':'siw';
     var oc=o.order_code||'';var ocr=o.order_code_referral||'';var code=(ocr.charAt(0)==='L'?ocr:oc.charAt(0)==='L'?oc:'L0'+o.id);
-    var rowMargin=fr2>0?pr2/fr2*100:0;return '<tr style="'+(rowMargin>20?'background:rgba(255,94,108,.12);':'')+'"><td class="ono">'+code+'</td><td><div class="ocl">'+getClientName(o.client_id).slice(0,25)+'</div></td><td class="osb">'+getUserName(o.user_id||o.logistician_id)+'</td><td><span class="sb '+sc+'">'+stName2+'</span></td><td class="r ofr">'+eur(fr2)+'</td><td class="r osb">'+eur(ex2)+'</td><td class="r opr">'+eur(pr2)+'</td><td class="r" style="'+(fr2>0&&(pr2/fr2*100)>20?'color:#ff5e6c;font-weight:900;':'color:var(--ink2);')+'font-variant-numeric:tabular-nums">'+(fr2>0?Math.round(pr2/fr2*100):0)+'%'+(fr2>0&&(pr2/fr2*100)>20?' ⚠':'')+'</td></tr>';
-  }).join('')+(orders.length>50?'<tr><td colspan="9" style="text-align:center;color:var(--mut);padding:10px;font-size:11px">... ещё '+(orders.length-50)+' заказов</td></tr>':'')+'</tbody></table>';
+    var rowMargin=fr2>0?pr2/fr2*100:0;
+    var rowStyle=rowMargin>20?'background:rgba(255,94,108,.12);':'';
+    var marginCell=fr2>0?Math.round(rowMargin)+'%'+(rowMargin>20?' \u26A0':''):'0%';
+    var marginColor=rowMargin>20?'color:#ff5e6c;font-weight:900;':'color:var(--ink2);';
+    var expCell=o.logistician_id?getExpName(o.logistician_id):'\u2014';
+    return '<tr style="'+rowStyle+'"><td class="ono">'+code+'</td><td><div class="ocl">'+getClientName(o.client_id).slice(0,25)+'</div></td><td class="osb">'+getUserName(o.user_id||o.logistician_id)+'</td><td class="osb">'+expCell+'</td><td><span class="sb '+sc+'">'+stName2+'</span></td><td class="r ofr">'+eur(fr2)+'</td><td class="r osb">'+eur(ex2)+'</td><td class="r opr">'+eur(pr2)+'</td><td class="r" style="'+marginColor+'font-variant-numeric:tabular-nums">'+marginCell+'</td></tr>';
+  }).join('');
+  if(orders.length>50)ordRows+='<tr><td colspan="9" style="text-align:center;color:var(--mut);padding:10px;font-size:11px">... ещё '+(orders.length-50)+' заказов</td></tr>';
+  document.getElementById('orders-table').innerHTML='<table class="ord-tbl"><thead><tr><th>№</th><th>Клиент</th><th>Менеджер</th><th>Экспедитор</th><th>Статус</th><th class="r">Фрахт</th><th class="r">Расходы</th><th class="r">Прибыль</th><th class="r">Маржа</th></tr></thead><tbody>'+ordRows+'</tbody></table>';
+  // Charts
   var days=Object.keys(dayMap).sort(function(a,b){return (+a)-(+b);});
   ['freightChart','expChart','profitChart'].forEach(function(id){if(charts[id]){charts[id].destroy();delete charts[id];}});
   function lineChart(id,data,color,label){charts[id]=new Chart(document.getElementById(id),{type:'line',data:{labels:days,datasets:[{label:label,data:data,borderColor:color,backgroundColor:color+'18',fill:true,tension:.3,borderWidth:2,pointRadius:4,pointBackgroundColor:color}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#111d32',borderColor:'#253857',borderWidth:1,callbacks:{label:function(c){return ' '+label+': \u20AC'+c.parsed.y.toLocaleString();}}}},scales:{x:{grid:{color:'#1e2f4a'},ticks:{color:'#4d6280',font:{size:8},maxRotation:0}},y:{grid:{color:'#1e2f4a'},ticks:{color:'#4d6280',callback:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v;}}}}}});}
@@ -242,10 +143,6 @@ function renderDashboard(orders,df,dt){
   lineChart('profitChart',days.map(function(d){return Math.round(dayMap[d].pr);}),G,'Прибыль');
   if(charts['mgrChart']){charts['mgrChart'].destroy();delete charts['mgrChart'];}
   charts['mgrChart']=new Chart(document.getElementById('mgrChart'),{type:'bar',data:{labels:ms.map(function(e){return e[0].split(' ')[0];}),datasets:[{label:'Фрахт',data:ms.map(function(e){return Math.round(e[1].fr);}),backgroundColor:B+'55',borderColor:B,borderWidth:1,borderRadius:4},{label:'Прибыль',data:ms.map(function(e){return Math.round(e[1].pr);}),backgroundColor:G+'88',borderColor:G,borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8fa3bf',boxWidth:8,padding:10,font:{size:9}}},tooltip:{backgroundColor:'#111d32',borderColor:'#253857',borderWidth:1,callbacks:{label:function(c){return ' '+c.dataset.label+': \u20AC'+c.parsed.y.toLocaleString();}}}},scales:{x:{grid:{color:'#1e2f4a'},ticks:{color:'#4d6280',font:{size:9}}},y:{grid:{color:'#1e2f4a'},ticks:{color:'#4d6280',callback:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v;}}}}}});
-  // Expeditor table
-  var es=Object.entries(expMap).sort(function(a,b){return b[1].n-a[1].n;});
-  document.getElementById('exp-table').innerHTML='<table class="utbl"><thead><tr><th>Экспедитор</th><th>Заказов</th></tr></thead><tbody>'+es.map(function(e){return '<tr><td>'+e[0]+'</td><td style="text-align:right;font-weight:800;color:var(--ink)">'+e[1].n+'</td></tr>';}).join('')+'<tr class="tot"><td>Итого</td><td style="text-align:right">'+orders.length+'</td></tr></tbody></table>';
-
   var cs=Object.entries(cliMap).sort(function(a,b){return b[1].pr-a[1].pr;}).slice(0,15);
   document.getElementById('cli-table').innerHTML='<table class="utbl"><thead><tr><th>Клиент</th><th>Зак.</th><th>Фрахт</th><th>Прибыль</th><th>Маржа</th></tr></thead><tbody>'+cs.map(function(e){var c=e[0],v=e[1];return '<tr><td>'+c.slice(0,22)+'</td><td style="text-align:right;font-weight:800;color:var(--ink)">'+v.n+'</td><td>'+eur(v.fr)+'</td><td class="pr-g">'+eur(v.pr)+'</td><td>'+(v.fr>0?Math.round(v.pr/v.fr*100):0)+'%</td></tr>';}).join('')+'<tr class="tot"><td>Итого</td><td style="text-align:right">'+orders.length+'</td><td>'+eur(totalFr)+'</td><td class="pr-g">'+eur(totalPr)+'</td><td>'+mg+'%</td></tr></tbody></table>';
 }
