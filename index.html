@@ -42,9 +42,12 @@
 <div class="kpi-row"><div class="kpi"><div class="kv" id="k-count" style="color:var(--blue)">—</div><div class="kl">Заказов</div><div class="kd" id="k-count-d"></div></div><div class="kpi"><div class="kv" id="k-freight" style="color:var(--ink)">—</div><div class="kl">Фрахт</div><div class="kd" id="k-freight-d"></div></div><div class="kpi"><div class="kv" id="k-expenses" style="color:var(--red)">—</div><div class="kl">Расходы</div><div class="kd" id="k-expenses-d"></div></div><div class="kpi"><div class="kv" id="k-profit" style="color:var(--green)">—</div><div class="kl">Прибыль</div><div class="kd" id="k-margin-d"></div></div></div>
 <div class="g21" style="margin-bottom:10px;"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры</div><div id="mgr-table"></div></div><div class="card"><div class="ch"><span class="dot dp"></span>Экспедиторы</div><div id="exp-table"></div></div></div>
 <div class="card" style="margin-bottom:10px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);">Статусы:</span><div id="status-pills" class="pills" style="display:inline-flex;"></div></div></div>
-<div class="card" style="overflow-x:auto;margin-bottom:10px;"><div class="ch"><span class="dot db"></span>Заказы периода</div><div id="orders-table"></div></div></div>
-<div class="block"><div class="block-hdr"><div class="block-num">2</div><div class="block-title">Динамика по дням</div></div><div class="g3"><div class="card"><div class="ch"><span class="dot db"></span>Фрахт</div><div class="chart-box" style="height:150px;"><canvas id="freightChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot dr"></span>Расходы</div><div class="chart-box" style="height:150px;"><canvas id="expChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot dg"></span>Прибыль</div><div class="chart-box" style="height:150px;"><canvas id="profitChart"></canvas></div></div></div></div>
-<div class="block"><div class="block-hdr"><div class="block-num">3</div><div class="block-title">Аналитика</div></div><div class="g2"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры · фрахт vs прибыль</div><div class="chart-box" style="height:180px;"><canvas id="mgrChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot do"></span>Клиенты · топ по прибыли</div><div id="cli-table"></div></div></div></div>
+<div class="block"><div class="block-hdr"><div class="block-num">2</div><div class="block-title">Активные заказы экспедиторов</div><div class="block-sub">все активные · без привязки к периоду</div></div>
+<div class="card" style="overflow-x:auto;"><div id="active-exp-table"></div></div></div>
+<div class="block"><div class="block-hdr"><div class="block-num">3</div><div class="block-title">Заказы периода</div><div class="block-sub" id="orders-period-label"></div></div>
+<div class="card" style="overflow-x:auto;"><div id="orders-table"></div></div></div>
+<div class="block"><div class="block-hdr"><div class="block-num">4</div><div class="block-title">Динамика по дням</div></div><div class="g3"><div class="card"><div class="ch"><span class="dot db"></span>Фрахт</div><div class="chart-box" style="height:150px;"><canvas id="freightChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot dr"></span>Расходы</div><div class="chart-box" style="height:150px;"><canvas id="expChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot dg"></span>Прибыль</div><div class="chart-box" style="height:150px;"><canvas id="profitChart"></canvas></div></div></div></div>
+<div class="block"><div class="block-hdr"><div class="block-num">5</div><div class="block-title">Аналитика</div></div><div class="g2"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры · фрахт vs прибыль</div><div class="chart-box" style="height:180px;"><canvas id="mgrChart"></canvas></div></div><div class="card"><div class="ch"><span class="dot do"></span>Клиенты · топ по прибыли</div><div id="cli-table"></div></div></div></div>
 </div>
 <div id="empty-state" class="card empty-state"><div style="font-size:32px;margin-bottom:10px;opacity:.5;">📊</div><div style="font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:6px;">Выберите период и нажмите «Загрузить»</div><div>Данные загружаются напрямую из 4logist</div></div>
 <div class="foot">Lazarus Forwarding · Живой дашборд · 4logist API</div>
@@ -86,12 +89,57 @@ function getExpName(id){if(!id)return '\u2014';return usersMap[id]||(id==31?'Art
 function loadData(){var df=document.getElementById('date-from').value,dt=document.getElementById('date-to').value;if(!df||!dt){alert('Выберите период');return;}var btn=document.getElementById('load-btn');btn.disabled=true;document.getElementById('content').style.display='none';document.getElementById('empty-state').style.display='none';setStatus('loading','Авторизация...');
 getToken().then(function(){setStatus('loading','Загружаем справочники...');return loadRefData();}).then(function(){setStatus('loading','Загружаем заказы...');var allOrders=[],page=0,totalItems=9999;function loadPage(){setStatus('loading','Загружаем заказы... ('+allOrders.length+')');return apiPost('api/orders/list',{perPage:500,page:page}).then(function(res){var batch=res.data||[];if(res.dataInfo&&res.dataInfo.amountItems)totalItems=res.dataInfo.amountItems;if(Array.isArray(batch)&&batch.length>0){allOrders=allOrders.concat(batch);page++;if(allOrders.length<totalItems&&page<20)return loadPage();}});}
 return loadPage().then(function(){DATE_KEY=pickDateKey(allOrders);var orders=allOrders.filter(function(o){var d=orderDateStr(o);if(!d||d.length<10)return false;return d>=df&&d<=dt;});
-renderDashboard(orders,df,dt);setStatus('success','Загружено '+orders.length+' заказов (фильтр по «'+DATE_KEY+'»)');document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');var ft=document.querySelector('.foot');if(ft)ft.innerHTML='Lazarus Forwarding · Живой дашборд · 4logist API<br>Фильтр по дате заказа: поле «'+DATE_KEY+'» · найдено '+orders.length+' заказов за период';document.getElementById('content').style.display='block';});}).catch(function(e){setStatus('error','Ошибка: '+e.message);document.getElementById('empty-state').style.display='block';document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';}).finally(function(){btn.disabled=false;});}
+renderDashboard(orders,df,dt,allOrders);setStatus('success','Загружено '+orders.length+' заказов (фильтр по «'+DATE_KEY+'»)');document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');var ft=document.querySelector('.foot');if(ft)ft.innerHTML='Lazarus Forwarding · Живой дашборд · 4logist API<br>Фильтр по дате заказа: поле «'+DATE_KEY+'» · найдено '+orders.length+' заказов за период';document.getElementById('content').style.display='block';});}).catch(function(e){setStatus('error','Ошибка: '+e.message);document.getElementById('empty-state').style.display='block';document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';}).finally(function(){btn.disabled=false;});}
 
-function renderDashboard(orders,df,dt){
+function renderDashboard(orders,df,dt,allOrders){
   var d1=new Date(df).toLocaleDateString('ru',{day:'numeric',month:'short'});
   var d2=new Date(dt).toLocaleDateString('ru',{day:'numeric',month:'short',year:'numeric'});
   document.getElementById('period-label').textContent=d1+' \u2014 '+d2;
+  var ordPL=document.getElementById('orders-period-label');if(ordPL)ordPL.textContent=d1+' \u2014 '+d2;
+
+  // ---- Блок 2: Активные заказы экспедиторов (все заказы, без фильтра по дате) ----
+  var ACTIVE_STATUSES={'in work':true,'ordered and scheduled':true,'in work last step':true};
+  var activeMap={};
+  (allOrders||orders).forEach(function(o){
+    var stObj=o.status;
+    var stName=(stObj&&typeof stObj==='object')?(stObj.name||''):String(stObj||'');
+    var stLow=stName.toLowerCase().trim();
+    if(!ACTIVE_STATUSES[stLow])return;
+    var expName=o.logistician_id?getUserName(o.logistician_id):'Не назначен';
+    if(!activeMap[expName])activeMap[expName]={total:0,os:0,iw:0,ls:0};
+    activeMap[expName].total++;
+    if(stLow==='ordered and scheduled')activeMap[expName].os++;
+    else if(stLow==='in work last step')activeMap[expName].ls++;
+    else if(stLow==='in work')activeMap[expName].iw++;
+  });
+  var activeRows=Object.entries(activeMap).sort(function(a,b){return b[1].total-a[1].total;});
+  var totA={total:0,os:0,iw:0,ls:0};
+  activeRows.forEach(function(e){var v=e[1];totA.total+=v.total;totA.os+=v.os;totA.iw+=v.iw;totA.ls+=v.ls;});
+  var aHtml='<table class="utbl"><thead><tr>'
+    +'<th style="text-align:left">Экспедитор</th>'
+    +'<th>Заказов</th>'
+    +'<th style="color:var(--orange)">Ordered and scheduled</th>'
+    +'<th style="color:var(--blue)">In work</th>'
+    +'<th style="color:var(--purple)">IN WORK LAST STEP</th>'
+    +'</tr></thead><tbody>'
+    +activeRows.map(function(e){
+      var n=e[0],v=e[1];
+      return '<tr>'
+        +'<td>'+n+'</td>'
+        +'<td style="text-align:right;font-weight:800;color:var(--ink)">'+v.total+'</td>'
+        +'<td style="text-align:right;color:var(--orange);font-weight:700">'+v.os+'</td>'
+        +'<td style="text-align:right;color:var(--blue);font-weight:700">'+v.iw+'</td>'
+        +'<td style="text-align:right;color:var(--purple);font-weight:700">'+v.ls+'</td>'
+        +'</tr>';
+    }).join('')
+    +'<tr class="tot"><td>Итого</td>'
+    +'<td style="text-align:right">'+totA.total+'</td>'
+    +'<td style="text-align:right;color:var(--orange)">'+totA.os+'</td>'
+    +'<td style="text-align:right;color:var(--blue)">'+totA.iw+'</td>'
+    +'<td style="text-align:right;color:var(--purple)">'+totA.ls+'</td>'
+    +'</tr></tbody></table>';
+  document.getElementById('active-exp-table').innerHTML=aHtml;
+  // ---- конец блока 2 ----
   var totalFr=0,totalEx=0,totalPr=0;
   var mgrMap={},cliMap={},stMap={},dayMap={},expMap={};
   orders.forEach(function(o){
