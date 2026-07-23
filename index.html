@@ -64,6 +64,14 @@ var G='#00e5a0',B='#3d9eff',P='#a78bfa',O='#ffac45',R='#ff5e6c';
 var TIP={backgroundColor:'#111d32',borderColor:'#253857',borderWidth:1,titleColor:'#8fa3bf',bodyColor:'#dde5f2',padding:10};
 Chart.defaults.color='#4d6280';Chart.defaults.font.size=10;
 var token=null,charts={},usersMap={},clientsMap={};
+// --- ДАТА ЗАКАЗА ---
+// 4Logist фильтрует список заказов по "Дате заказа", НЕ по дате фрахта/погрузки.
+// Раньше дашборд фильтровал по freight_date -> в период попадали старые заказы,
+// у которых погрузка в этом месяце, но сам заказ создан раньше, и терялись заказы
+// без даты погрузки. Выбираем одно поле даты заказа и используем его для всех заказов.
+var DATE_KEY=null;
+function pickDateKey(arr){var keys=['order_date','orderDate','date_order','order_created','date','created_at','created'];for(var i=0;i<keys.length;i++){if(arr.some(function(o){return o&&o[keys[i]];}))return keys[i];}return 'created';}
+function orderDateStr(o){var v=DATE_KEY?o[DATE_KEY]:(o.order_date||o.created);return String(v||'').slice(0,10);}
 function eur(v){return '\u20AC'+Math.round(v).toLocaleString('ru');}
 function setWeek(){var n=new Date(),d=n.getDay()||7,m=new Date(n);m.setDate(n.getDate()-d+1);var s=new Date(m);s.setDate(m.getDate()+6);document.getElementById('date-from').value=m.toISOString().slice(0,10);document.getElementById('date-to').value=s.toISOString().slice(0,10);}
 function setPrevWeek(){var n=new Date(),d=n.getDay()||7,m=new Date(n);m.setDate(n.getDate()-d-6);var s=new Date(m);s.setDate(m.getDate()+6);document.getElementById('date-from').value=m.toISOString().slice(0,10);document.getElementById('date-to').value=s.toISOString().slice(0,10);}
@@ -77,8 +85,8 @@ function getClientName(id){return clientsMap[id]||('Client '+id);}
 function getExpName(id){if(!id)return '\u2014';return usersMap[id]||(id==31?'Artjoms Hondozko':'User '+id);}
 function loadData(){var df=document.getElementById('date-from').value,dt=document.getElementById('date-to').value;if(!df||!dt){alert('Выберите период');return;}var btn=document.getElementById('load-btn');btn.disabled=true;document.getElementById('content').style.display='none';document.getElementById('empty-state').style.display='none';setStatus('loading','Авторизация...');
 getToken().then(function(){setStatus('loading','Загружаем справочники...');return loadRefData();}).then(function(){setStatus('loading','Загружаем заказы...');var allOrders=[],page=0,totalItems=9999;function loadPage(){setStatus('loading','Загружаем заказы... ('+allOrders.length+')');return apiPost('api/orders/list',{perPage:500,page:page}).then(function(res){var batch=res.data||[];if(res.dataInfo&&res.dataInfo.amountItems)totalItems=res.dataInfo.amountItems;if(Array.isArray(batch)&&batch.length>0){allOrders=allOrders.concat(batch);page++;if(allOrders.length<totalItems&&page<20)return loadPage();}});}
-return loadPage().then(function(){var orders=allOrders.filter(function(o){var raw=String(o.freight_date||'');if(!raw||raw==='null'||raw.length<10)return false;var d=raw.slice(0,10);return d>=df&&d<=dt;});
-renderDashboard(orders,df,dt);setStatus('success','Загружено '+orders.length+' заказов');document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');document.getElementById('content').style.display='block';});}).catch(function(e){setStatus('error','Ошибка: '+e.message);document.getElementById('empty-state').style.display='block';document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';}).finally(function(){btn.disabled=false;});}
+return loadPage().then(function(){DATE_KEY=pickDateKey(allOrders);var orders=allOrders.filter(function(o){var d=orderDateStr(o);if(!d||d.length<10)return false;return d>=df&&d<=dt;});
+renderDashboard(orders,df,dt);setStatus('success','Загружено '+orders.length+' заказов (фильтр по «'+DATE_KEY+'»)');document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');var ft=document.querySelector('.foot');if(ft)ft.innerHTML='Lazarus Forwarding · Живой дашборд · 4logist API<br>Фильтр по дате заказа: поле «'+DATE_KEY+'» · найдено '+orders.length+' заказов за период';document.getElementById('content').style.display='block';});}).catch(function(e){setStatus('error','Ошибка: '+e.message);document.getElementById('empty-state').style.display='block';document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';}).finally(function(){btn.disabled=false;});}
 
 function renderDashboard(orders,df,dt){
   var d1=new Date(df).toLocaleDateString('ru',{day:'numeric',month:'short'});
@@ -91,7 +99,7 @@ function renderDashboard(orders,df,dt){
     var mgrName=getUserName(o.user_id||o.logistician_id);
     var cliName=getClientName(o.client_id);
     var stObj=o.status;var stName=(stObj&&typeof stObj==='object')?(stObj.name||'N/A'):String(stObj||'N/A');
-    var dateStr=String(o.freight_date||o.created||'');var day=dateStr.slice(8,10)||'?';
+    var dateStr=orderDateStr(o);var day=dateStr.slice(8,10)||'?';
     var expName=o.logistician_id?getUserName(o.logistician_id):'\u041D\u0435 \u043D\u0430\u0437\u043D\u0430\u0447\u0435\u043D';
     totalFr+=fr;totalEx+=ex;totalPr+=pr;
     if(!mgrMap[mgrName])mgrMap[mgrName]={n:0,fr:0,pr:0,ex:0};mgrMap[mgrName].n++;mgrMap[mgrName].fr+=fr;mgrMap[mgrName].pr+=pr;mgrMap[mgrName].ex+=ex;
