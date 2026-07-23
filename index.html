@@ -88,7 +88,9 @@ function getClientName(id){return clientsMap[id]||('Client '+id);}
 function getExpName(id){if(!id)return '\u2014';return usersMap[id]||(id==31?'Artjoms Hondozko':'User '+id);}
 function loadData(){var df=document.getElementById('date-from').value,dt=document.getElementById('date-to').value;if(!df||!dt){alert('Выберите период');return;}var btn=document.getElementById('load-btn');btn.disabled=true;document.getElementById('content').style.display='none';document.getElementById('empty-state').style.display='none';setStatus('loading','Авторизация...');
 getToken().then(function(){setStatus('loading','Загружаем справочники...');return loadRefData();}).then(function(){setStatus('loading','Загружаем заказы...');var allOrders=[],page=0,totalItems=9999;function loadPage(){setStatus('loading','Загружаем заказы... ('+allOrders.length+')');return apiPost('api/orders/list',{perPage:500,page:page}).then(function(res){var batch=res.data||[];if(res.dataInfo&&res.dataInfo.amountItems)totalItems=res.dataInfo.amountItems;if(Array.isArray(batch)&&batch.length>0){allOrders=allOrders.concat(batch);page++;if(allOrders.length<totalItems&&page<20)return loadPage();}});}
-return loadPage().then(function(){DATE_KEY=pickDateKey(allOrders);var orders=allOrders.filter(function(o){var d=orderDateStr(o);if(!d||d.length<10)return false;return d>=df&&d<=dt;});
+return loadPage().then(function(){DATE_KEY=pickDateKey(allOrders);
+
+  var orders=allOrders.filter(function(o){var d=orderDateStr(o);if(!d||d.length<10)return false;return d>=df&&d<=dt;});
 renderDashboard(orders,df,dt,allOrders);setStatus('success','Загружено '+orders.length+' заказов (фильтр по «'+DATE_KEY+'»)');document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');var ft=document.querySelector('.foot');if(ft)ft.innerHTML='Lazarus Forwarding · Живой дашборд · 4logist API<br>Фильтр по дате заказа: поле «'+DATE_KEY+'» · найдено '+orders.length+' заказов за период';document.getElementById('content').style.display='block';});}).catch(function(e){setStatus('error','Ошибка: '+e.message);document.getElementById('empty-state').style.display='block';document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';}).finally(function(){btn.disabled=false;});}
 
 function renderDashboard(orders,df,dt,allOrders){
@@ -98,19 +100,25 @@ function renderDashboard(orders,df,dt,allOrders){
   var ordPL=document.getElementById('orders-period-label');if(ordPL)ordPL.textContent=d1+' \u2014 '+d2;
 
   // ---- Блок 2: Активные заказы экспедиторов (все заказы, без фильтра по дате) ----
-  var ACTIVE_STATUSES={'in work':true,'ordered and scheduled':true,'in work last step':true};
   var activeMap={};
   (allOrders||orders).forEach(function(o){
     var stObj=o.status;
+    var stId=(stObj&&typeof stObj==='object')?stObj.id:o.status_id;
     var stName=(stObj&&typeof stObj==='object')?(stObj.name||''):String(stObj||'');
-    var stLow=stName.toLowerCase().trim();
-    if(!ACTIVE_STATUSES[stLow])return;
+    var stLow=stName.toLowerCase().replace(/\s+/g,' ').trim();
+    // id=1  → Ordered and scheduled
+    // id=20 → In work
+    // id=34 → "IN WORK   LAST  STEP" (в API с лишними пробелами)
+    var isLS = stId===34 || stLow.indexOf('last')>=0;
+    var isOS = !isLS && (stId===1  || stLow==='ordered and scheduled');
+    var isIW = !isLS && (stId===20 || stLow==='in work');
+    if(!isLS && !isOS && !isIW)return;
     var expName=o.logistician_id?getUserName(o.logistician_id):'Не назначен';
     if(!activeMap[expName])activeMap[expName]={total:0,os:0,iw:0,ls:0};
     activeMap[expName].total++;
-    if(stLow==='ordered and scheduled')activeMap[expName].os++;
-    else if(stLow==='in work last step')activeMap[expName].ls++;
-    else if(stLow==='in work')activeMap[expName].iw++;
+    if(isOS)activeMap[expName].os++;
+    else if(isLS)activeMap[expName].ls++;
+    else if(isIW)activeMap[expName].iw++;
   });
   var activeRows=Object.entries(activeMap).sort(function(a,b){return b[1].total-a[1].total;});
   var totA={total:0,os:0,iw:0,ls:0};
@@ -146,7 +154,7 @@ function renderDashboard(orders,df,dt,allOrders){
     var ex=parseFloat(o.cost||0),pr=parseFloat(o.profit||0),fr=pr+ex;
     var mgrName=getUserName(o.user_id||o.logistician_id);
     var cliName=getClientName(o.client_id);
-    var stObj=o.status;var stName=(stObj&&typeof stObj==='object')?(stObj.name||'N/A'):String(stObj||'N/A');
+    var stObj=o.status;var stName=((stObj&&typeof stObj==='object')?(stObj.name||'N/A'):String(stObj||'N/A')).replace(/\s+/g,' ').trim();
     var dateStr=orderDateStr(o);var day=dateStr.slice(8,10)||'?';
     var expName=o.logistician_id?getUserName(o.logistician_id):'\u041D\u0435 \u043D\u0430\u0437\u043D\u0430\u0447\u0435\u043D';
     totalFr+=fr;totalEx+=ex;totalPr+=pr;
@@ -177,7 +185,7 @@ function renderDashboard(orders,df,dt,allOrders){
   // Orders table with expeditor column
   var ordRows=orders.slice(0,50).map(function(o){
     var ex2=parseFloat(o.cost||0),pr2=parseFloat(o.profit||0),fr2=pr2+ex2;
-    var stObj2=o.status;var stName2=(stObj2&&typeof stObj2==='object')?(stObj2.name||'\u2014'):String(stObj2||'\u2014');
+    var stObj2=o.status;var stName2=(stObj2&&typeof stObj2==='object')?(stObj2.name||'\u2014'):String(stObj2||'\u2014');stName2=stName2.replace(/\s+/g,' ').trim();
     var stLow=stName2.toLowerCase();
     var sc=stLow.indexOf('last')>=0?'sls':stLow.indexOf('work')>=0?'siw':(stLow.indexOf('order')>=0||stLow.indexOf('sched')>=0)?'sos':(stLow.indexOf('deliver')>=0||stLow.indexOf('finish')>=0)?'sdl':'siw';
     var oc=o.order_code||'';var ocr=o.order_code_referral||'';var code=(ocr.charAt(0)==='L'?ocr:oc.charAt(0)==='L'?oc:'L0'+o.id);
