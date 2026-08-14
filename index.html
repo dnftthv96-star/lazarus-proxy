@@ -90,24 +90,43 @@ function loadPlanData(){
   }).catch(function(e){console.warn('Plan load error:',e);planMap={};});
 }
 function monthsInRange(df,dt){var res=[];var d=new Date(df+'T00:00:00');var end=new Date(dt+'T00:00:00');d.setDate(1);var guard=0;while(d<=end&&guard<60){res.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));d.setMonth(d.getMonth()+1);guard++;}return res;}
-function renderPlanBlock(df,dt,totalFr,totalPr){
+function shiftYear(dateStr,delta){var d=new Date(dateStr+'T00:00:00');d.setFullYear(d.getFullYear()+delta);return d.toISOString().slice(0,10);}
+function computeTotals(list){var fr=0,pr=0;list.forEach(function(o){var ex=parseFloat(o.cost||0),p=parseFloat(o.profit||0);fr+=(p+ex);pr+=p;});return{fr:fr,pr:pr,n:list.length};}
+function renderPlanBlock(df,dt,totalFr,totalPr,allOrders){
   var months=monthsInRange(df,dt);
-  var planFr=0,planPr=0,found=false;
-  months.forEach(function(m){if(planMap[m]){planFr+=planMap[m].fr;planPr+=planMap[m].pr;found=true;}});
+  var planFr=0,planPr=0,planFound=false;
+  months.forEach(function(m){if(planMap[m]){planFr+=planMap[m].fr;planPr+=planMap[m].pr;planFound=true;}});
+  var prevDf=shiftYear(df,-1),prevDt=shiftYear(dt,-1);
+  var prevOrders=(allOrders||[]).filter(function(o){var d=orderDateStr(o);if(!d||d.length<10)return false;return d>=prevDf&&d<=prevDt;});
+  var prev=computeTotals(prevOrders);
   var block=document.getElementById('plan-block');
-  if(!found){block.style.display='none';return;}
+  var hasPrev=prev.n>0;
+  if(!planFound&&!hasPrev){block.style.display='none';return;}
   block.style.display='grid';
-  function paint(id,plan,fact){
-    var pct=plan>0?Math.round(fact/plan*1000)/10:0;
-    var col=pct>=100?'var(--green)':pct>=70?'var(--blue)':'var(--orange)';
-    document.getElementById(id).innerHTML=
-      '<div class="plan-num"><span>План: '+eur(plan)+'</span><span>Факт: <b>'+eur(fact)+'</b></span></div>'
-      +'<div class="progress-track"><div class="progress-fill" style="width:'+Math.min(Math.max(pct,0),100)+'%;background:'+col+'"></div></div>'
-      +'<div class="plan-pct" style="color:'+col+'">'+pct+'%</div><div class="plan-pct-label">выполнения плана</div>'
-      +'<div class="plan-note">за '+months.join(', ')+'</div>';
+  function paint(id,plan,fact,prevVal){
+    var html='';
+    if(plan>0){
+      var pct=Math.round(fact/plan*1000)/10;
+      var col=pct>=100?'var(--green)':pct>=70?'var(--blue)':'var(--orange)';
+      html+='<div class="plan-num"><span>План: '+eur(plan)+'</span><span>Факт: <b>'+eur(fact)+'</b></span></div>'
+        +'<div class="progress-track"><div class="progress-fill" style="width:'+Math.min(Math.max(pct,0),100)+'%;background:'+col+'"></div></div>'
+        +'<div class="plan-pct" style="color:'+col+'">'+pct+'%</div><div class="plan-pct-label">выполнения плана</div>'
+        +'<div class="plan-note">за '+months.join(', ')+'</div>';
+    }else{
+      html+='<div class="plan-num"><span>План: нет данных</span><span>Факт: <b>'+eur(fact)+'</b></span></div>';
+    }
+    if(prevVal>0){
+      var yoyPct=Math.round((fact/prevVal*100-100)*10)/10;
+      var yoyColor=yoyPct>=0?'var(--green)':'var(--red)';
+      var yoyArrow=yoyPct>=0?'\u25B2':'\u25BC';
+      html+='<div class="plan-note" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">Год назад (тот же период): '+eur(prevVal)+'&nbsp; <span style="color:'+yoyColor+';font-weight:800">'+yoyArrow+' '+Math.abs(yoyPct)+'%</span></div>';
+    }else{
+      html+='<div class="plan-note" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">Год назад: данных за этот период нет</div>';
+    }
+    document.getElementById(id).innerHTML=html;
   }
-  paint('plan-freight-body',planFr,totalFr);
-  paint('plan-profit-body',planPr,totalPr);
+  paint('plan-freight-body',planFr,totalFr,prev.fr);
+  paint('plan-profit-body',planPr,totalPr,prev.pr);
 }
 // --- ДАТА ЗАКАЗА ---
 // 4Logist фильтрует список заказов по "Дате заказа", НЕ по дате фрахта/погрузки.
@@ -216,7 +235,7 @@ function renderDashboard(orders,df,dt,allOrders){
   document.getElementById('k-expenses-d').textContent=(totalFr>0?Math.round(totalEx/totalFr*100):0)+'% от фрахта';
   document.getElementById('k-margin-d').textContent='Маржа '+mg+'%';
   document.getElementById('k-margin-d').className='kd '+(mg>15?'up':'dn');
-  renderPlanBlock(df,dt,totalFr,totalPr);
+  renderPlanBlock(df,dt,totalFr,totalPr,allOrders);
   var stCls={'In work':'piw','Ordered and scheduled':'pos','Ordered':'pos','Delivered':'pdl','Finished':'pdl','In work last step':'pls','IN WORK LAST STEP':'pls'};
   document.getElementById('status-pills').innerHTML=Object.entries(stMap).map(function(e){return '<div class="pill '+(stCls[e[0]]||'piw')+'"><span class="pdot"></span>'+e[0]+'<span class="pc">'+e[1]+'</span></div>';}).join('');
   // Managers
