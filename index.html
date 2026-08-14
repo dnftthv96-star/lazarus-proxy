@@ -20,6 +20,7 @@
 .sb{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9.5px;font-weight:800;white-space:nowrap;border:1px solid;}.siw{background:var(--bd);color:var(--blue);border-color:rgba(61,158,255,.3);}.sos{background:var(--od);color:var(--orange);border-color:rgba(255,172,69,.3);}.sdl{background:var(--gd);color:var(--green);border-color:rgba(0,229,160,.3);}.sls{background:var(--pd);color:var(--purple);border-color:rgba(167,139,250,.3);}
 .block{margin-bottom:22px;}.block-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;}.block-num{width:26px;height:26px;border-radius:50%;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:var(--green);flex:none;}.block-title{font-size:13px;font-weight:800;color:var(--ink);}.block-sub{font-size:11px;color:var(--mut);margin-left:auto;}
 .chart-box{position:relative;width:100%;}.empty-state{text-align:center;padding:40px 20px;color:var(--mut);font-size:13px;}.foot{font-size:10px;color:var(--mut);text-align:center;margin-top:24px;line-height:1.6;}
+.plan-num{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--ink2);margin-bottom:8px;}.plan-num b{color:var(--ink);font-size:15px;}.progress-track{width:100%;height:8px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-bottom:8px;}.progress-fill{height:100%;border-radius:5px;transition:width .4s;}.plan-pct{font-size:22px;font-weight:900;line-height:1;}.plan-pct-label{font-size:10px;color:var(--mut);font-weight:700;margin-top:3px;text-transform:uppercase;letter-spacing:.4px;}.plan-note{font-size:10.5px;color:var(--mut);margin-top:8px;}
 @media(max-width:700px){.kpi-row,.g3{grid-template-columns:repeat(2,1fr);}.g2,.g21{grid-template-columns:1fr;}.controls{flex-direction:column;align-items:stretch;}}
 </style>
 </head>
@@ -40,6 +41,7 @@
 <div id="content" style="display:none;">
 <div class="block"><div class="block-hdr"><div class="block-num">1</div><div class="block-title">Текущий период</div><div class="block-sub" id="period-label"></div></div>
 <div class="kpi-row"><div class="kpi"><div class="kv" id="k-count" style="color:var(--blue)">—</div><div class="kl">Заказов</div><div class="kd" id="k-count-d"></div></div><div class="kpi"><div class="kv" id="k-freight" style="color:var(--ink)">—</div><div class="kl">Фрахт</div><div class="kd" id="k-freight-d"></div></div><div class="kpi"><div class="kv" id="k-expenses" style="color:var(--red)">—</div><div class="kl">Расходы</div><div class="kd" id="k-expenses-d"></div></div><div class="kpi"><div class="kv" id="k-profit" style="color:var(--green)">—</div><div class="kl">Прибыль</div><div class="kd" id="k-margin-d"></div></div></div>
+<div class="g2" id="plan-block" style="margin-bottom:10px;display:none;"><div class="card"><div class="ch"><span class="dot db"></span>План-факт · Фрахт</div><div id="plan-freight-body"></div></div><div class="card"><div class="ch"><span class="dot dg"></span>План-факт · Прибыль</div><div id="plan-profit-body"></div></div></div>
 <div class="g21" style="margin-bottom:10px;"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры</div><div id="mgr-table"></div></div><div class="card"><div class="ch"><span class="dot dp"></span>Экспедиторы</div><div id="exp-table"></div></div></div>
 <div class="card" style="margin-bottom:10px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);">Статусы:</span><div id="status-pills" class="pills" style="display:inline-flex;"></div></div></div>
 <div class="block"><div class="block-hdr"><div class="block-num">2</div><div class="block-title">Активные заказы экспедиторов</div><div class="block-sub">все активные · без привязки к периоду</div></div>
@@ -67,6 +69,46 @@ var G='#00e5a0',B='#3d9eff',P='#a78bfa',O='#ffac45',R='#ff5e6c';
 var TIP={backgroundColor:'#111d32',borderColor:'#253857',borderWidth:1,titleColor:'#8fa3bf',bodyColor:'#dde5f2',padding:10};
 Chart.defaults.color='#4d6280';Chart.defaults.font.size=10;
 var token=null,charts={},usersMap={},clientsMap={};
+// --- ПЛАН (Google Таблица, лист "Plan_дашборд": month | plan_freight | plan_profit) ---
+// Ссылка одна на всех пользователей — меняется только здесь, в коде.
+var PLAN_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vRO65na9Yg8lkkUfMMm4pJKG4jhg-_CgMsFVOXoQVQ9X-OrZtPI2ml5vZkdvGfnE6xICyrsa1UgdSg7/pub?gid=1774379741&single=true&output=csv';
+var planMap={};
+function parseCsvLine(line){var res=[],cur='',inQ=false;for(var i=0;i<line.length;i++){var ch=line[i];if(inQ){if(ch==='"'){if(line[i+1]==='"'){cur+='"';i++;}else{inQ=false;}}else cur+=ch;}else{if(ch==='"')inQ=true;else if(ch===','){res.push(cur);cur='';}else cur+=ch;}}res.push(cur);return res;}
+function parseNum(s){if(s==null)return 0;var v=parseFloat(String(s).replace(/[^\d.\-]/g,''));return isNaN(v)?0:v;}
+function loadPlanData(){
+  return fetch(PLAN_CSV_URL,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('Plan CSV:'+r.status);return r.text();}).then(function(text){
+    var map={};
+    var lines=text.split(/\r?\n/).filter(function(l){return l.trim().length>0;});
+    for(var i=1;i<lines.length;i++){
+      var cols=parseCsvLine(lines[i]);
+      var month=(cols[0]||'').trim();
+      if(!/^\d{4}-\d{1,2}$/.test(month))continue;
+      var parts=month.split('-');month=parts[0]+'-'+String(parts[1]).padStart(2,'0');
+      map[month]={fr:parseNum(cols[1]),pr:parseNum(cols[2])};
+    }
+    planMap=map;
+  }).catch(function(e){console.warn('Plan load error:',e);planMap={};});
+}
+function monthsInRange(df,dt){var res=[];var d=new Date(df+'T00:00:00');var end=new Date(dt+'T00:00:00');d.setDate(1);var guard=0;while(d<=end&&guard<60){res.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));d.setMonth(d.getMonth()+1);guard++;}return res;}
+function renderPlanBlock(df,dt,totalFr,totalPr){
+  var months=monthsInRange(df,dt);
+  var planFr=0,planPr=0,found=false;
+  months.forEach(function(m){if(planMap[m]){planFr+=planMap[m].fr;planPr+=planMap[m].pr;found=true;}});
+  var block=document.getElementById('plan-block');
+  if(!found){block.style.display='none';return;}
+  block.style.display='grid';
+  function paint(id,plan,fact){
+    var pct=plan>0?Math.round(fact/plan*1000)/10:0;
+    var col=pct>=100?'var(--green)':pct>=70?'var(--blue)':'var(--orange)';
+    document.getElementById(id).innerHTML=
+      '<div class="plan-num"><span>План: '+eur(plan)+'</span><span>Факт: <b>'+eur(fact)+'</b></span></div>'
+      +'<div class="progress-track"><div class="progress-fill" style="width:'+Math.min(Math.max(pct,0),100)+'%;background:'+col+'"></div></div>'
+      +'<div class="plan-pct" style="color:'+col+'">'+pct+'%</div><div class="plan-pct-label">выполнения плана</div>'
+      +'<div class="plan-note">за '+months.join(', ')+'</div>';
+  }
+  paint('plan-freight-body',planFr,totalFr);
+  paint('plan-profit-body',planPr,totalPr);
+}
 // --- ДАТА ЗАКАЗА ---
 // 4Logist фильтрует список заказов по "Дате заказа", НЕ по дате фрахта/погрузки.
 // Раньше дашборд фильтровал по freight_date -> в период попадали старые заказы,
@@ -87,7 +129,7 @@ function getUserName(id){return usersMap[id]||(id==31?'Artjoms Hondozko':'User '
 function getClientName(id){return clientsMap[id]||('Client '+id);}
 function getExpName(id){if(!id)return '\u2014';return usersMap[id]||(id==31?'Artjoms Hondozko':'User '+id);}
 function loadData(){var df=document.getElementById('date-from').value,dt=document.getElementById('date-to').value;if(!df||!dt){alert('Выберите период');return;}var btn=document.getElementById('load-btn');btn.disabled=true;document.getElementById('content').style.display='none';document.getElementById('empty-state').style.display='none';setStatus('loading','Авторизация...');
-getToken().then(function(){setStatus('loading','Загружаем справочники...');return loadRefData();}).then(function(){setStatus('loading','Загружаем заказы...');var allOrders=[],page=0,totalItems=9999;function loadPage(){setStatus('loading','Загружаем заказы... ('+allOrders.length+')');return apiPost('api/orders/list',{perPage:500,page:page}).then(function(res){var batch=res.data||[];if(res.dataInfo&&res.dataInfo.amountItems)totalItems=res.dataInfo.amountItems;if(Array.isArray(batch)&&batch.length>0){allOrders=allOrders.concat(batch);page++;if(allOrders.length<totalItems&&page<20)return loadPage();}});}
+getToken().then(function(){setStatus('loading','Загружаем справочники...');return Promise.all([loadRefData(),loadPlanData()]);}).then(function(){setStatus('loading','Загружаем заказы...');var allOrders=[],page=0,totalItems=9999;function loadPage(){setStatus('loading','Загружаем заказы... ('+allOrders.length+')');return apiPost('api/orders/list',{perPage:500,page:page}).then(function(res){var batch=res.data||[];if(res.dataInfo&&res.dataInfo.amountItems)totalItems=res.dataInfo.amountItems;if(Array.isArray(batch)&&batch.length>0){allOrders=allOrders.concat(batch);page++;if(allOrders.length<totalItems&&page<20)return loadPage();}});}
 return loadPage().then(function(){DATE_KEY=pickDateKey(allOrders);
 
   var orders=allOrders.filter(function(o){var d=orderDateStr(o);if(!d||d.length<10)return false;return d>=df&&d<=dt;});
@@ -174,6 +216,7 @@ function renderDashboard(orders,df,dt,allOrders){
   document.getElementById('k-expenses-d').textContent=(totalFr>0?Math.round(totalEx/totalFr*100):0)+'% от фрахта';
   document.getElementById('k-margin-d').textContent='Маржа '+mg+'%';
   document.getElementById('k-margin-d').className='kd '+(mg>15?'up':'dn');
+  renderPlanBlock(df,dt,totalFr,totalPr);
   var stCls={'In work':'piw','Ordered and scheduled':'pos','Ordered':'pos','Delivered':'pdl','Finished':'pdl','In work last step':'pls','IN WORK LAST STEP':'pls'};
   document.getElementById('status-pills').innerHTML=Object.entries(stMap).map(function(e){return '<div class="pill '+(stCls[e[0]]||'piw')+'"><span class="pdot"></span>'+e[0]+'<span class="pc">'+e[1]+'</span></div>';}).join('');
   // Managers
