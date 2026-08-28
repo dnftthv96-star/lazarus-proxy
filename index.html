@@ -21,6 +21,7 @@
 .block{margin-bottom:22px;}.block-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;}.block-num{width:26px;height:26px;border-radius:50%;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:var(--green);flex:none;}.block-title{font-size:13px;font-weight:800;color:var(--ink);}.block-sub{font-size:11px;color:var(--mut);margin-left:auto;}
 .chart-box{position:relative;width:100%;}.empty-state{text-align:center;padding:40px 20px;color:var(--mut);font-size:13px;}.foot{font-size:10px;color:var(--mut);text-align:center;margin-top:24px;line-height:1.6;}
 .plan-num{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--ink2);margin-bottom:8px;}.plan-num b{color:var(--ink);font-size:15px;}.progress-track{width:100%;height:8px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-bottom:8px;}.progress-fill{height:100%;border-radius:5px;transition:width .4s;}.plan-pct{font-size:22px;font-weight:900;line-height:1;}.plan-pct-label{font-size:10px;color:var(--mut);font-weight:700;margin-top:3px;text-transform:uppercase;letter-spacing:.4px;}.plan-note{font-size:10.5px;color:var(--mut);margin-top:8px;}
+.mgr-plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;}.mgr-plan-item{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px 13px 11px;}.mgr-plan-name{font-size:12px;font-weight:800;color:var(--ink);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}.mgr-plan-name span.mgr-init{font-size:9.5px;font-weight:700;color:var(--mut);background:var(--card);border:1px solid var(--border2);border-radius:5px;padding:1px 6px;}.mgr-plan-item .plan-num{font-size:11.5px;margin-bottom:6px;}.mgr-plan-item .plan-num b{font-size:13px;}.mgr-plan-item .progress-track{height:6px;margin-bottom:6px;}.mgr-plan-item .plan-pct{font-size:17px;}.mgr-plan-item .plan-pct-label{font-size:9px;}
 @media(max-width:700px){.kpi-row,.g3{grid-template-columns:repeat(2,1fr);}.g2,.g21{grid-template-columns:1fr;}.controls{flex-direction:column;align-items:stretch;}}
 </style>
 </head>
@@ -42,6 +43,7 @@
 <div class="block"><div class="block-hdr"><div class="block-num">1</div><div class="block-title">Текущий период</div><div class="block-sub" id="period-label"></div></div>
 <div class="kpi-row"><div class="kpi"><div class="kv" id="k-count" style="color:var(--blue)">—</div><div class="kl">Заказов</div><div class="kd" id="k-count-d"></div></div><div class="kpi"><div class="kv" id="k-freight" style="color:var(--ink)">—</div><div class="kl">Фрахт</div><div class="kd" id="k-freight-d"></div></div><div class="kpi"><div class="kv" id="k-expenses" style="color:var(--red)">—</div><div class="kl">Расходы</div><div class="kd" id="k-expenses-d"></div></div><div class="kpi"><div class="kv" id="k-profit" style="color:var(--green)">—</div><div class="kl">Прибыль</div><div class="kd" id="k-margin-d"></div></div></div>
 <div class="g2" id="plan-block" style="margin-bottom:10px;display:none;"><div class="card"><div class="ch"><span class="dot db"></span>План-факт · Фрахт</div><div id="plan-freight-body"></div></div><div class="card"><div class="ch"><span class="dot dg"></span>План-факт · Прибыль</div><div id="plan-profit-body"></div></div></div>
+<div class="card" id="mgr-plan-block" style="margin-bottom:10px;display:none;"><div class="ch"><span class="dot dp"></span>План-факт по менеджерам · Прибыль</div><div id="mgr-plan-body" class="mgr-plan-grid"></div></div>
 <div class="g21" style="margin-bottom:10px;"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры</div><div id="mgr-table"></div></div><div class="card"><div class="ch"><span class="dot dp"></span>Экспедиторы</div><div id="exp-table"></div></div></div>
 <div class="card" style="margin-bottom:10px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);">Статусы:</span><div id="status-pills" class="pills" style="display:inline-flex;"></div></div></div>
 <div class="block"><div class="block-hdr"><div class="block-num">2</div><div class="block-title">Активные заказы экспедиторов</div><div class="block-sub">все активные · без привязки к периоду</div></div>
@@ -73,21 +75,36 @@ var token=null,charts={},usersMap={},clientsMap={};
 // Ссылка одна на всех пользователей — меняется только здесь, в коде.
 var PLAN_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vRO65na9Yg8lkkUfMMm4pJKG4jhg-_CgMsFVOXoQVQ9X-OrZtPI2ml5vZkdvGfnE6xICyrsa1UgdSg7/pub?gid=1774379741&single=true&output=csv';
 var planMap={};
+var planMgrKeys=[]; // список инициалов менеджеров, найденных в шапке гугл-таблицы (plan_profit_XX)
 function parseCsvLine(line){var res=[],cur='',inQ=false;for(var i=0;i<line.length;i++){var ch=line[i];if(inQ){if(ch==='"'){if(line[i+1]==='"'){cur+='"';i++;}else{inQ=false;}}else cur+=ch;}else{if(ch==='"')inQ=true;else if(ch===','){res.push(cur);cur='';}else cur+=ch;}}res.push(cur);return res;}
 function parseNum(s){if(s==null)return 0;var v=parseFloat(String(s).replace(/[^\d.\-]/g,''));return isNaN(v)?0:v;}
+// Инициалы менеджера из его полного имени, напр. "Artjoms Hondozko" -> "AH"
+function nameInitials(name){if(!name)return '';var parts=String(name).trim().split(/\s+/).filter(Boolean);if(parts.length===0)return '';if(parts.length===1)return parts[0].slice(0,2).toUpperCase();return (parts[0][0]+parts[1][0]).toUpperCase();}
 function loadPlanData(){
   return fetch(PLAN_CSV_URL,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('Plan CSV:'+r.status);return r.text();}).then(function(text){
     var map={};
     var lines=text.split(/\r?\n/).filter(function(l){return l.trim().length>0;});
+    if(lines.length===0){planMap={};planMgrKeys=[];return;}
+    var header=parseCsvLine(lines[0]);
+    // Колонки вида plan_profit_AH, plan_profit_II и т.д. — план по прибыли конкретного менеджера (по инициалам)
+    var mgrCols=[];
+    for(var c=3;c<header.length;c++){
+      var h=(header[c]||'').trim();
+      var m=h.match(/^plan_profit_([A-Za-zА-Яа-яЁё]+)$/i);
+      if(m)mgrCols.push({idx:c,key:m[1].toUpperCase()});
+    }
     for(var i=1;i<lines.length;i++){
       var cols=parseCsvLine(lines[i]);
       var month=(cols[0]||'').trim();
       if(!/^\d{4}-\d{1,2}$/.test(month))continue;
       var parts=month.split('-');month=parts[0]+'-'+String(parts[1]).padStart(2,'0');
-      map[month]={fr:parseNum(cols[1]),pr:parseNum(cols[2])};
+      var rec={fr:parseNum(cols[1]),pr:parseNum(cols[2]),mgr:{}};
+      mgrCols.forEach(function(mc){rec.mgr[mc.key]=parseNum(cols[mc.idx]);});
+      map[month]=rec;
     }
     planMap=map;
-  }).catch(function(e){console.warn('Plan load error:',e);planMap={};});
+    planMgrKeys=mgrCols.map(function(mc){return mc.key;});
+  }).catch(function(e){console.warn('Plan load error:',e);planMap={};planMgrKeys=[];});
 }
 function monthsInRange(df,dt){var res=[];var d=new Date(df+'T00:00:00');var end=new Date(dt+'T00:00:00');d.setDate(1);var guard=0;while(d<=end&&guard<60){res.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));d.setMonth(d.getMonth()+1);guard++;}return res;}
 function shiftYear(dateStr,delta){var d=new Date(dateStr+'T00:00:00');d.setFullYear(d.getFullYear()+delta);return d.toISOString().slice(0,10);}
@@ -127,6 +144,44 @@ function renderPlanBlock(df,dt,totalFr,totalPr,allOrders){
   }
   paint('plan-freight-body',planFr,totalFr,prev.fr);
   paint('plan-profit-body',planPr,totalPr,prev.pr);
+}
+// --- ПЛАН ПО МЕНЕДЖЕРАМ (та же логика, что и общий план, но с делением по инициалам) ---
+function renderMgrPlanBlock(df,dt,mgrMap){
+  var block=document.getElementById('mgr-plan-block');
+  if(!planMgrKeys||planMgrKeys.length===0){block.style.display='none';return;}
+  var months=monthsInRange(df,dt);
+  // план по каждому менеджеру за месяцы периода
+  var planByKey={};
+  planMgrKeys.forEach(function(key){planByKey[key]=0;});
+  months.forEach(function(m){var rec=planMap[m];if(!rec||!rec.mgr)return;planMgrKeys.forEach(function(key){planByKey[key]+=(rec.mgr[key]||0);});});
+  // факт по каждому менеджеру за период: сопоставляем реальных менеджеров (mgrMap) с инициалами по имени
+  var factByKey={};
+  planMgrKeys.forEach(function(key){factByKey[key]={pr:0,name:null};});
+  Object.keys(mgrMap||{}).forEach(function(mgrName){
+    var key=nameInitials(mgrName);
+    if(factByKey[key]){factByKey[key].pr+=mgrMap[mgrName].pr;factByKey[key].name=mgrName;}
+  });
+  var html='';
+  planMgrKeys.forEach(function(key){
+    var plan=planByKey[key]||0;
+    var fact=factByKey[key].pr||0;
+    var label=factByKey[key].name||key;
+    if(plan<=0 && fact<=0)return; // нечего показывать
+    if(plan>0){
+      var pct=Math.round(fact/plan*1000)/10;
+      var col=pct>=100?'var(--green)':pct>=70?'var(--blue)':'var(--orange)';
+      html+='<div class="mgr-plan-item"><div class="mgr-plan-name">'+label+'<span class="mgr-init">'+key+'</span></div>'
+        +'<div class="plan-num"><span>План: '+eur(plan)+'</span><span>Факт: <b>'+eur(fact)+'</b></span></div>'
+        +'<div class="progress-track"><div class="progress-fill" style="width:'+Math.min(Math.max(pct,0),100)+'%;background:'+col+'"></div></div>'
+        +'<div class="plan-pct" style="color:'+col+'">'+pct+'%</div><div class="plan-pct-label">выполнения плана</div></div>';
+    }else{
+      html+='<div class="mgr-plan-item"><div class="mgr-plan-name">'+label+'<span class="mgr-init">'+key+'</span></div>'
+        +'<div class="plan-num"><span>План: нет данных</span><span>Факт: <b>'+eur(fact)+'</b></span></div></div>';
+    }
+  });
+  if(!html){block.style.display='none';return;}
+  block.style.display='block';
+  document.getElementById('mgr-plan-body').innerHTML=html;
 }
 // --- ДАТА ЗАКАЗА ---
 // 4Logist фильтрует список заказов по "Дате заказа", НЕ по дате фрахта/погрузки.
@@ -236,6 +291,7 @@ function renderDashboard(orders,df,dt,allOrders){
   document.getElementById('k-margin-d').textContent='Маржа '+mg+'%';
   document.getElementById('k-margin-d').className='kd '+(mg>15?'up':'dn');
   renderPlanBlock(df,dt,totalFr,totalPr,allOrders);
+  renderMgrPlanBlock(df,dt,mgrMap);
   var stCls={'In work':'piw','Ordered and scheduled':'pos','Ordered':'pos','Delivered':'pdl','Finished':'pdl','In work last step':'pls','IN WORK LAST STEP':'pls'};
   document.getElementById('status-pills').innerHTML=Object.entries(stMap).map(function(e){return '<div class="pill '+(stCls[e[0]]||'piw')+'"><span class="pdot"></span>'+e[0]+'<span class="pc">'+e[1]+'</span></div>';}).join('');
   // Managers
