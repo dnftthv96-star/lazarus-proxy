@@ -71,7 +71,7 @@
 <div class="block"><div class="block-hdr"><div class="block-num">2</div><div class="block-title">Заказы периода</div><div class="block-sub" id="orders-period-label-inv"></div></div>
 <div class="card" style="overflow-x:auto;"><div id="orders-table-inv"></div></div></div>
 <div class="block"><div class="block-hdr"><div class="block-num">3</div><div class="block-title">Аналитика</div></div><div class="g2"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры · фрахт vs прибыль</div><div class="chart-box" style="height:180px;"><canvas id="mgrChartInv"></canvas></div></div><div class="card"><div class="ch"><span class="dot do"></span>Клиенты · топ по прибыли</div><div id="cli-table-inv"></div></div></div></div>
-<div class="foot" style="margin-top:0;">Фильтр по дате первого выставленного счёта заказа (issued первого invoice)</div>
+<div class="foot" id="invoice-foot" style="margin-top:0;">Фильтр по дате первого выставленного счёта заказа (issued первого invoice)</div>
 </div>
 </div>
 <div id="empty-state" class="card empty-state"><div style="font-size:32px;margin-bottom:10px;opacity:.5;">📊</div><div style="font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:6px;">Выберите период и нажмите «Загрузить»</div><div>Данные загружаются напрямую из 4logist</div></div>
@@ -108,7 +108,7 @@
 </div>
 <div id="ar-empty-state" class="card empty-state"><div style="font-size:32px;margin-bottom:10px;opacity:.5;">💰</div><div style="font-size:14px;font-weight:700;color:var(--ink2);">Загружаем данные дебиторки...</div></div>
 </div>
-<div class="foot">Lazarus Forwarding · Живой дашборд · 4logist API</div>
+<div class="foot" id="main-foot">Lazarus Forwarding · Живой дашборд · 4logist API</div>
 </div>
 <script>
 var DASHBOARD_PASSWORD='5858';
@@ -264,7 +264,7 @@ return loadPage().then(function(){DATE_KEY=pickDateKey(allOrders);
 
   var orders=allOrders.filter(function(o){var d=orderDateStr(o);if(!d||d.length<10)return false;return d>=df&&d<=dt;});
 var invOrders=allOrders.filter(function(o){var d=orderInvoiceDateStr(o);if(!d||d.length<10)return false;return d>=df&&d<=dt;});
-renderDashboard(orders,df,dt,allOrders);renderInvoiceDashboard(invOrders,df,dt);mainTabLoaded=true;setStatus('success','Загружено '+orders.length+' заказов (фильтр по «'+DATE_KEY+'»)');document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');var ft=document.querySelector('.foot');if(ft)ft.innerHTML='Lazarus Forwarding · Живой дашборд · 4logist API<br>Фильтр по дате заказа: поле «'+DATE_KEY+'» · найдено '+orders.length+' заказов за период';document.getElementById('content').style.display='block';});}).catch(function(e){setStatus('error','Ошибка: '+e.message);document.getElementById('empty-state').style.display='block';document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';}).finally(function(){btn.disabled=false;});}
+renderDashboard(orders,df,dt,allOrders);renderInvoiceDashboard(invOrders,df,dt);mainTabLoaded=true;setStatus('success','Заказы (по дате заказа): '+orders.length+' · Счета (по дате счёта): '+invOrders.length);document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');var ft=document.getElementById('main-foot');if(ft)ft.innerHTML='Lazarus Forwarding · Живой дашборд · 4logist API<br>Фильтр по дате заказа: поле «'+DATE_KEY+'» · найдено '+orders.length+' заказов за период';document.getElementById('content').style.display='block';});}).catch(function(e){setStatus('error','Ошибка: '+e.message);document.getElementById('empty-state').style.display='block';document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';}).finally(function(){btn.disabled=false;});}
 
 function renderDashboard(orders,df,dt,allOrders){
   var d1=new Date(df).toLocaleDateString('ru',{day:'numeric',month:'short'});
