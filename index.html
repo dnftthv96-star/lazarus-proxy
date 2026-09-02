@@ -72,7 +72,7 @@
 <div class="block"><div class="block-hdr"><div class="block-num">2</div><div class="block-title">Заказы периода</div><div class="block-sub" id="orders-period-label-inv"></div></div>
 <div class="card" style="overflow-x:auto;"><div id="orders-table-inv"></div></div></div>
 <div class="block"><div class="block-hdr"><div class="block-num">3</div><div class="block-title">Аналитика</div></div><div class="g2"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры · фрахт vs прибыль</div><div class="chart-box" style="height:180px;"><canvas id="mgrChartInv"></canvas></div></div><div class="card"><div class="ch"><span class="dot do"></span>Клиенты · топ по прибыли</div><div id="cli-table-inv"></div></div></div></div>
-<div class="foot" id="invoice-foot" style="margin-top:0;">Фильтр по дате первого выставленного счёта заказа (issued первого invoice)</div>
+<div class="foot" id="invoice-foot" style="margin-top:0;">Заказ засчитан, если любой из его счетов выставлен в выбранный период (как в фильтре 4Logist «Счёт выписан»)</div>
 </div>
 </div>
 <div id="empty-state" class="card empty-state"><div style="font-size:32px;margin-bottom:10px;opacity:.5;">📊</div><div style="font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:6px;">Выберите период и нажмите «Загрузить»</div><div>Данные загружаются напрямую из 4logist</div></div>
@@ -81,7 +81,7 @@
 <button class="sub-tab-btn active" id="subtab-ar-all" onclick="showArSubTab('all')">Общая ДЗ</button>
 <button class="sub-tab-btn" id="subtab-ar-nogrohe" onclick="showArSubTab('nogrohe')">Без Grohe</button>
 <button class="sub-tab-btn" id="subtab-ar-grohe" onclick="showArSubTab('grohe')">Grohe</button>
-</div></div><div class="ctrl-sep"></div><button class="ctrl-btn" id="ar-load-btn" onclick="loadReceivables(true)">⟳ Обновить</button></div>
+</div></div><div class="ctrl-sep"></div><div class="ctrl-group"><span class="ctrl-label">Дата</span><select id="ar-period-select" class="ctrl-input" onchange="onArPeriodChange()"></select></div><div class="ctrl-sep"></div><button class="ctrl-btn" id="ar-load-btn" onclick="loadReceivables(true)">⟳ Обновить</button></div>
 <div class="status-bar hidden" id="ar-status-bar"><span id="ar-status-icon"></span><span id="ar-status-text"></span></div>
 <div id="ar-content" style="display:none;">
 <div class="block"><div class="block-hdr"><div class="block-num">1</div><div class="block-title">Текущее состояние</div><div class="block-sub" id="ar-period-label"></div></div>
@@ -246,7 +246,9 @@ function renderMgrPlanBlock(df,dt,mgrMap){
 var DATE_KEY=null;
 function pickDateKey(arr){var keys=['order_date','orderDate','date_order','order_created','date','created_at','created'];for(var i=0;i<keys.length;i++){if(arr.some(function(o){return o&&o[keys[i]];}))return keys[i];}return 'created';}
 function orderDateStr(o){var v=DATE_KEY?o[DATE_KEY]:(o.order_date||o.created);return String(v||'').slice(0,10);}
-// Дата ПЕРВОГО выставленного счёта заказа (invoices[].issued, минимальная дата)
+// Даты счетов заказа, попадающие в указанный период [df,dt] (может быть несколько счетов на заказ).
+// Заказ засчитывается на вкладке "Счёт", если ЛЮБОЙ его счёт выставлен в этот период — как в фильтре 4Logist.
+function orderInvoiceDatesInRange(o,df,dt){if(!o||!o.invoices||!o.invoices.length)return [];return o.invoices.map(function(iv){return String((iv&&iv.issued)||'').slice(0,10);}).filter(function(d){return d.length===10&&d>=df&&d<=dt;}).sort();}
 function orderInvoiceDateStr(o){if(!o||!o.invoices||!o.invoices.length)return '';var dates=o.invoices.map(function(iv){return String((iv&&iv.issued)||'').slice(0,10);}).filter(function(d){return d.length===10;});if(!dates.length)return '';dates.sort();return dates[0];}
 function eur(v){return '\u20AC'+Math.round(v).toLocaleString('ru');}
 function setWeek(){var n=new Date(),d=n.getDay()||7,m=new Date(n);m.setDate(n.getDate()-d+1);var s=new Date(m);s.setDate(m.getDate()+6);document.getElementById('date-from').value=m.toISOString().slice(0,10);document.getElementById('date-to').value=s.toISOString().slice(0,10);}
@@ -264,7 +266,7 @@ getToken().then(function(){setStatus('loading','Загружаем справо�
 return loadPage().then(function(){DATE_KEY=pickDateKey(allOrders);
 
   var orders=allOrders.filter(function(o){var d=orderDateStr(o);if(!d||d.length<10)return false;return d>=df&&d<=dt;});
-var invOrders=allOrders.filter(function(o){var d=orderInvoiceDateStr(o);if(!d||d.length<10)return false;return d>=df&&d<=dt;});
+var invOrders=allOrders.filter(function(o){return orderInvoiceDatesInRange(o,df,dt).length>0;});
 renderDashboard(orders,df,dt,allOrders);renderInvoiceDashboard(invOrders,df,dt);mainTabLoaded=true;setStatus('success','Заказы (по дате заказа): '+orders.length+' · Счета (по дате счёта): '+invOrders.length);document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');var ft=document.getElementById('main-foot');if(ft)ft.innerHTML='Lazarus Forwarding · Живой дашборд · 4logist API<br>Фильтр по дате заказа: поле «'+DATE_KEY+'» · найдено '+orders.length+' заказов за период';document.getElementById('content').style.display='block';});}).catch(function(e){setStatus('error','Ошибка: '+e.message);document.getElementById('empty-state').style.display='block';document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';}).finally(function(){btn.disabled=false;});}
 
 function renderDashboard(orders,df,dt,allOrders){
@@ -433,7 +435,7 @@ function renderInvoiceDashboard(orders,df,dt){
     var marginCell=fr2>0?Math.round(rowMargin)+'%'+(rowMargin>20?' \u26A0':''):'0%';
     var marginColor=rowMargin>20?'color:#ff5e6c;font-weight:900;':'color:var(--ink2);';
     var expCell=o.logistician_id?getExpName(o.logistician_id):'\u2014';
-    var invDate=orderInvoiceDateStr(o);
+    var invDate=orderInvoiceDatesInRange(o,df,dt).join(', ')||orderInvoiceDateStr(o);
     return '<tr style="'+rowStyle+'"><td class="ono">'+code+'</td><td><div class="ocl">'+getClientName(o.client_id).slice(0,25)+'</div></td><td class="osb">'+getUserName(o.user_id||o.logistician_id)+'</td><td class="osb">'+expCell+'</td><td class="osb">'+invDate+'</td><td><span class="sb '+sc+'">'+stName2+'</span></td><td class="r ofr">'+eur(fr2)+'</td><td class="r osb">'+eur(ex2)+'</td><td class="r opr">'+eur(pr2)+'</td><td class="r" style="'+marginColor+'font-variant-numeric:tabular-nums">'+marginCell+'</td></tr>';
   }).join('');
   if(orders.length>50)ordRows+='<tr><td colspan="10" style="text-align:center;color:var(--mut);padding:10px;font-size:11px">... ещё '+(orders.length-50)+' заказов</td></tr>';
@@ -511,8 +513,25 @@ function parseArCsv(text){
   return {periods:periods,metrics:metrics,companies:companies};
 }
 function setArStatus(type,text){var bar=document.getElementById('ar-status-bar');document.getElementById('ar-status-text').textContent=text;bar.className='status-bar '+type;var icon=document.getElementById('ar-status-icon');icon.textContent=type==='loading'?'\u27F3':type==='success'?'\u2713':'\u2715';icon.className=type==='loading'?'spin':'';if(type==='success')setTimeout(function(){bar.className='status-bar hidden';},3000);}
+function findDefaultArIndex(data){
+  for(var i=data.periods.length-1;i>=0;i--){
+    var hasTotal=data.metrics.total&&data.metrics.total[i]!=null&&data.metrics.total[i]!==0;
+    var hasCompanyVal=data.companies.some(function(c){return c.values[i];});
+    if(hasTotal||hasCompanyVal)return i;
+  }
+  return data.periods.length-1;
+}
+function populateArPeriodSelect(data,idx){
+  var sel=document.getElementById('ar-period-select');
+  sel.innerHTML=data.periods.map(function(p,i){return '<option value="'+i+'"'+(i===idx?' selected':'')+'>'+p+'</option>';}).join('');
+}
+function onArPeriodChange(){
+  var idx=parseInt(document.getElementById('ar-period-select').value,10);
+  var data=arRawCache[arCurrentTab];
+  if(data)renderArTab(data,idx);
+}
 function loadArSheet(key,force){
-  if(arRawCache[key]&&!force){renderArTab(arRawCache[key]);document.getElementById('ar-content').style.display='block';document.getElementById('ar-empty-state').style.display='none';return Promise.resolve();}
+  if(arRawCache[key]&&!force){var idx0=findDefaultArIndex(arRawCache[key]);populateArPeriodSelect(arRawCache[key],idx0);renderArTab(arRawCache[key],idx0);document.getElementById('ar-content').style.display='block';document.getElementById('ar-empty-state').style.display='none';return Promise.resolve();}
   setArStatus('loading','Загружаем данные...');
   document.getElementById('ar-content').style.display='none';
   document.getElementById('ar-empty-state').style.display='block';
@@ -521,7 +540,9 @@ function loadArSheet(key,force){
     var parsed=parseArCsv(text);
     if(!parsed||!parsed.periods.length)throw new Error('Не удалось распознать структуру таблицы');
     arRawCache[key]=parsed;
-    renderArTab(parsed);
+    var defIdx=findDefaultArIndex(parsed);
+    populateArPeriodSelect(parsed,defIdx);
+    renderArTab(parsed,defIdx);
     setArStatus('success','Обновлено');
     document.getElementById('ar-content').style.display='block';
     document.getElementById('ar-empty-state').style.display='none';
@@ -537,9 +558,9 @@ function showArSubTab(key){
   loadArSheet(key,false);
 }
 function loadReceivables(force){loadArSheet(arCurrentTab,force===true);}
-function renderArTab(data){
+function renderArTab(data,selIdx){
   var periods=data.periods,m=data.metrics,companies=data.companies;
-  var n=periods.length,last=n-1,prev=n-2;
+  var n=periods.length,last=(selIdx!=null?selIdx:n-1),prev=last-1;
   document.getElementById('ar-period-label').textContent='на '+periods[last];
   var total=(m.total||[])[last]||0,totalPrev=(prev>=0&&m.total)?m.total[prev]:null;
   var overdue=(m.overdue||[])[last]||0;
