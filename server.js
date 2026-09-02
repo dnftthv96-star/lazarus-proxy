@@ -78,6 +78,46 @@ app.get('/debug', async (req, res) => {
   }
 });
 
+app.get('/debug-fields', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+    const cid = html.match(/(?:const|var)\s+CLIENT_ID\s*=\s*'([^']+)'/)[1];
+    const cs  = html.match(/(?:const|var)\s+CLIENT_SECRET\s*=\s*'([^']+)'/)[1];
+    const un  = html.match(/(?:const|var)\s+USERNAME\s*=\s*'([^']+)'/)[1];
+    const pw  = html.match(/(?:const|var)\s+PASSWORD\s*=\s*'([^']+)'/)[1];
+
+    const tokenRes = await fetch(`${BASE}/oauth/v2/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=password&client_id=${cid}&client_secret=${cs}&username=${encodeURIComponent(un)}&password=${encodeURIComponent(pw)}`
+    });
+    const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) return res.send('<pre>Auth failed: ' + JSON.stringify(tokenData) + '</pre>');
+    const token = tokenData.access_token;
+
+    const r = await fetch(`${BASE}/api/orders/list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ perPage: 3, page: 0 })
+    });
+    const d = await r.json();
+    const orders = d.data || [];
+
+    const output = [];
+    output.push('=== ПОЛЯ ПЕРВЫХ 3 ЗАКАЗОВ (ищите поле с датой счёта) ===');
+    orders.forEach((o, i) => {
+      output.push('');
+      output.push('--- Заказ #' + i + ' (order_code_referral=' + o.order_code_referral + ') ---');
+      output.push(JSON.stringify(o, null, 2));
+    });
+
+    res.send('<pre style="font-size:12px;background:#111;color:#0f0;padding:20px;white-space:pre-wrap;line-height:1.6;">' + output.join('\n').replace(/</g,'&lt;') + '</pre>');
+  } catch (e) {
+    res.send('<pre>Error: ' + e.message + '\n' + e.stack + '</pre>');
+  }
+});
+
 app.all('/proxy/*', async (req, res) => {
   const apiPath = req.params[0];
   const url = `${BASE}/${apiPath}`;
