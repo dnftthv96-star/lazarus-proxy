@@ -78,43 +78,30 @@ app.get('/debug', async (req, res) => {
   }
 });
 
-app.get('/debug-fields', async (req, res) => {
+// --- Дебиторская задолженность: CSV из Google Таблицы (публикация "Опубликовать в интернете") ---
+// Ссылки видны только серверу, в браузер клиента не попадают.
+// Вставьте сюда 3 ссылки вида https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=...&single=true&output=csv
+const AR_CSV_URLS = {
+  all:     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRGaJ9psIimNc-Zc6_hPIcm2JHaAomf3sfHM2Z6NPqRKr-1N4yV8KY0-vVsNXFmsaZZxn0Cfw96uw2r/pub?gid=688805559&single=true&output=csv',
+  nogrohe: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRGaJ9psIimNc-Zc6_hPIcm2JHaAomf3sfHM2Z6NPqRKr-1N4yV8KY0-vVsNXFmsaZZxn0Cfw96uw2r/pub?gid=1446776803&single=true&output=csv',
+  grohe:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vRGaJ9psIimNc-Zc6_hPIcm2JHaAomf3sfHM2Z6NPqRKr-1N4yV8KY0-vVsNXFmsaZZxn0Cfw96uw2r/pub?gid=2001779062&single=true&output=csv'
+};
+
+app.get('/proxy-sheet/:sheet', async (req, res) => {
+  const key = req.params.sheet;
+  const url = AR_CSV_URLS[key];
+  if (!url || url.indexOf('PASTE_LINK') === 0) {
+    return res.status(500).json({ error: 'CSV-ссылка для "' + key + '" ещё не настроена в server.js (AR_CSV_URLS)' });
+  }
   try {
-    const fs = require('fs');
-    const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-    const cid = html.match(/(?:const|var)\s+CLIENT_ID\s*=\s*'([^']+)'/)[1];
-    const cs  = html.match(/(?:const|var)\s+CLIENT_SECRET\s*=\s*'([^']+)'/)[1];
-    const un  = html.match(/(?:const|var)\s+USERNAME\s*=\s*'([^']+)'/)[1];
-    const pw  = html.match(/(?:const|var)\s+PASSWORD\s*=\s*'([^']+)'/)[1];
-
-    const tokenRes = await fetch(`${BASE}/oauth/v2/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `grant_type=password&client_id=${cid}&client_secret=${cs}&username=${encodeURIComponent(un)}&password=${encodeURIComponent(pw)}`
-    });
-    const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) return res.send('<pre>Auth failed: ' + JSON.stringify(tokenData) + '</pre>');
-    const token = tokenData.access_token;
-
-    const r = await fetch(`${BASE}/api/orders/list`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ perPage: 3, page: 0 })
-    });
-    const d = await r.json();
-    const orders = d.data || [];
-
-    const output = [];
-    output.push('=== ПОЛЯ ПЕРВЫХ 3 ЗАКАЗОВ (ищите поле с датой счёта) ===');
-    orders.forEach((o, i) => {
-      output.push('');
-      output.push('--- Заказ #' + i + ' (order_code_referral=' + o.order_code_referral + ') ---');
-      output.push(JSON.stringify(o, null, 2));
-    });
-
-    res.send('<pre style="font-size:12px;background:#111;color:#0f0;padding:20px;white-space:pre-wrap;line-height:1.6;">' + output.join('\n').replace(/</g,'&lt;') + '</pre>');
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error('Sheet fetch failed: ' + r.status);
+    const text = await r.text();
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(text);
   } catch (e) {
-    res.send('<pre>Error: ' + e.message + '\n' + e.stack + '</pre>');
+    res.status(500).json({ error: e.message });
   }
 });
 
