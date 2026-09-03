@@ -479,14 +479,14 @@ function parseArCsv(text){
   }
   if(headerRowIdx===-1)return null;
   var periods=dateCols.map(function(ci){return rows[headerRowIdx][ci].trim();});
-  var labelMap={withinTerm:'в рамках срока',d30:'до 30 дней',d3060:'30-60 дней',d60:'больше 60 дней',total:'общая дз',overdue:'просроченная дз',doubtful:'сомнительная',operational:'операционная',avgPerClient:'средний уровень дз'};
+  var labelMap={withinTerm:'в рамках срока',d30:'до 30 дней',d3060:'30-60 дней',d60:'больше 60 дней',total:'общая дз',overdue:'просрочен',doubtful:'сомнительная',operational:'операционная',avgPerClient:'средний уровень дз'};
   var metrics={};Object.keys(labelMap).forEach(function(k){metrics[k]=null;});
   var companyHeaderIdx=-1;
   for(var r2=headerRowIdx+1;r2<rows.length;r2++){
     var b=(rows[r2][1]||'').trim();var bl=b.toLowerCase();
     if(!b)continue;
     var matched=null;
-    Object.keys(labelMap).forEach(function(k){if(metrics[k]===null&&bl.indexOf(labelMap[k])>=0)matched=k;});
+    Object.keys(labelMap).forEach(function(k){if(metrics[k]===null&&bl.indexOf(labelMap[k])===0)matched=k;});
     if(matched){metrics[matched]=dateCols.map(function(ci){return parseNum(rows[r2][ci]);});continue;}
     if(!b){}
   }
