@@ -103,7 +103,7 @@
 <div class="card"><div class="ch"><span class="dot dr"></span>Топ-10 должников</div><div id="ar-top-debtors"></div></div>
 <div class="card"><div class="ch"><span class="dot dg"></span>Изменение за последний период</div><div id="ar-top-changes"></div></div>
 </div>
-<div class="card" style="margin-top:10px;"><div class="ch"><span class="dot do"></span>Разбивка долга на последнюю дату</div><div class="chart-box" style="height:220px;"><canvas id="arAgingPie"></canvas></div></div>
+<div class="card" style="margin-top:10px;"><div class="ch"><span class="dot do"></span>Разбивка долга <span id="ar-aging-pie-label">на выбранную дату</span></div><div class="chart-box" style="height:220px;"><canvas id="arAgingPie"></canvas></div></div>
 <div class="card" style="margin-top:10px;overflow-x:auto;"><div class="ch"><span class="dot db"></span>Все контрагенты</div><div id="ar-all-table"></div></div>
 </div>
 </div>
@@ -499,15 +499,12 @@ function parseArCsv(text){
   }
   var companies=[];
   if(companyHeaderIdx>-1){
-    var changeColIdx=-1;
-    rows[companyHeaderIdx].forEach(function(cell,ci){if((cell||'').toLowerCase().indexOf('изменен')>=0)changeColIdx=ci;});
     for(var r4=companyHeaderIdx+1;r4<rows.length;r4++){
       var name=(rows[r4][1]||'').trim();
       if(!name){if(companies.length>0)break;else continue;}
       if(name.toLowerCase()==='check')break;
       var vals=dateCols.map(function(ci){return parseNum(rows[r4][ci]);});
-      var change=changeColIdx>-1?parseNum(rows[r4][changeColIdx]):(vals[vals.length-1]-vals[vals.length-2]);
-      companies.push({name:name,values:vals,change:change});
+      companies.push({name:name,values:vals});
     }
   }
   return {periods:periods,metrics:metrics,companies:companies};
@@ -562,6 +559,7 @@ function renderArTab(data,selIdx){
   var periods=data.periods,m=data.metrics,companies=data.companies;
   var n=periods.length,last=(selIdx!=null?selIdx:n-1),prev=last-1;
   document.getElementById('ar-period-label').textContent='на '+periods[last];
+  var pieLbl=document.getElementById('ar-aging-pie-label');if(pieLbl)pieLbl.textContent='на '+periods[last];
   var total=(m.total||[])[last]||0,totalPrev=(prev>=0&&m.total)?m.total[prev]:null;
   var overdue=(m.overdue||[])[last]||0;
   var doubtful=(m.doubtful||[])[last]||0;
@@ -606,7 +604,9 @@ function renderArTab(data,selIdx){
     var v=c.values[last]||0;var pct=maxVal>0?Math.round(v/maxVal*100):0;
     return '<div class="top-bar-row"><div class="top-bar-name">'+c.name+'</div><div class="top-bar-track"><div class="top-bar-fill" style="width:'+pct+'%;background:'+B+'"></div></div><div class="top-bar-val">'+eur(v)+'</div></div>';
   }).join('')||'<div style="color:var(--mut);font-size:12px;">Нет данных</div>';
-  var sortedByChange=companies.slice().sort(function(a,b){return Math.abs(b.change)-Math.abs(a.change);});
+  // Изменение считаем динамически: выбранная дата минус предыдущая по списку периодов (а не статичный столбец из таблицы)
+  var companiesWithChange=companies.map(function(c){var chg=prev>=0?(c.values[last]||0)-(c.values[prev]||0):0;return {name:c.name,values:c.values,change:chg};});
+  var sortedByChange=companiesWithChange.slice().sort(function(a,b){return Math.abs(b.change)-Math.abs(a.change);});
   var topCh=sortedByChange.slice(0,10);
   var maxChg=topCh.length?Math.max.apply(null,topCh.map(function(c){return Math.abs(c.change);})):0;
   document.getElementById('ar-top-changes').innerHTML=topCh.map(function(c){
@@ -614,8 +614,9 @@ function renderArTab(data,selIdx){
     var col=c.change<0?G:R;var sign=c.change>0?'+':'';
     return '<div class="top-bar-row"><div class="top-bar-name">'+c.name+'</div><div class="top-bar-track"><div class="top-bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div><div class="top-bar-val" style="color:'+col+'">'+sign+eur(c.change)+'</div></div>';
   }).join('')||'<div style="color:var(--mut);font-size:12px;">Нет данных</div>';
-  document.getElementById('ar-clients-label').textContent=companies.length+' контрагентов · период: '+periods[last];
-  document.getElementById('ar-all-table').innerHTML='<table class="utbl"><thead><tr><th>Контрагент</th><th>Долг на '+periods[last]+'</th><th>Изменение</th></tr></thead><tbody>'+sortedByLast.map(function(c){
+  document.getElementById('ar-clients-label').textContent=companies.length+' контрагентов · период: '+periods[last]+(prev>=0?' (изменение к '+periods[prev]+')':'');
+  var sortedByLastWithChange=companiesWithChange.slice().sort(function(a,b){return (b.values[last]||0)-(a.values[last]||0);});
+  document.getElementById('ar-all-table').innerHTML='<table class="utbl"><thead><tr><th>Контрагент</th><th>Долг на '+periods[last]+'</th><th>Изменение</th></tr></thead><tbody>'+sortedByLastWithChange.map(function(c){
     var v=c.values[last]||0;var col=c.change<0?'color:var(--green)':c.change>0?'color:var(--red)':'color:var(--ink2)';var sign=c.change>0?'+':'';
     return '<tr><td>'+c.name+'</td><td style="text-align:right;font-weight:700;color:var(--ink)">'+eur(v)+'</td><td style="text-align:right;'+col+'">'+sign+eur(c.change)+'</td></tr>';
   }).join('')+'<tr class="tot"><td>Итого</td><td style="text-align:right">'+eur(total)+'</td><td></td></tr></tbody></table>';
