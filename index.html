@@ -490,12 +490,12 @@ function parseArCsv(text){
     if(matched){metrics[matched]=dateCols.map(function(ci){return parseNum(rows[r2][ci]);});continue;}
     if(!b){}
   }
-  // Ищем строку-заголовок таблицы контрагентов: пустая колонка B, но снова есть даты в колонках дат
+  // Ищем строку-заголовок таблицы контрагентов: во всех колонках дат снова стоят даты.
+  // Раньше тут ещё требовалось, чтобы колонка B была пустой — но на вкладке Grohe
+  // в этой строке в колонке B стоит текст "Основные дебиторы", и старая проверка не срабатывала.
   for(var r3=headerRowIdx+1;r3<rows.length;r3++){
-    var b3=(rows[r3][1]||'').trim();
-    if(b3)continue;
-    var hasDates=dateCols.some(function(ci){return dateRe.test((rows[r3][ci]||'').trim());});
-    if(hasDates){companyHeaderIdx=r3;break;}
+    var hasAllDates=dateCols.every(function(ci){return dateRe.test((rows[r3][ci]||'').trim());});
+    if(hasAllDates){companyHeaderIdx=r3;break;}
   }
   var companies=[];
   if(companyHeaderIdx>-1){
