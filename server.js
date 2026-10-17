@@ -1,134 +1,82 @@
+// Lazarus — Живой дашборд (старый). Все доступы хранятся только здесь, на сервере.
+// Браузер получает от сервера только данные и только после ввода пароля.
+// Репозиторий на GitHub должен быть Private.
 const express = require('express');
-const cors = require('cors');
 const path = require('path');
-const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
+const crypto = require('crypto');
+const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
 
 const app = express();
-app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-const BASE = 'https://lazarus.4logist.com';
+// ---------- ДОСТУПЫ ----------
+const BASE          = 'https://lazarus.4logist.com';
+const CLIENT_ID     = process.env.LOGIST_CLIENT_ID     || '1bjgh8arbb1coccosockkkc4sskwoc4gos8koggos04kc0w484';
+const CLIENT_SECRET = process.env.LOGIST_CLIENT_SECRET || '65uax2lgcko48cwkg4c00cg080g8ks8484wc4k04ssgoksk0sg';
+const USERNAME      = process.env.LOGIST_USERNAME      || 'Artjom_H';
+const PASSWORD      = process.env.LOGIST_PASSWORD      || 'LazarusAH2025';
+const DASH_PASSWORD = process.env.DASHBOARD_PASSWORD   || '5858';   // пароль на сайт
 
-app.get('/debug', async (req, res) => {
-  try {
-    const fs = require('fs');
-    const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-    const cid = html.match(/(?:const|var)\s+CLIENT_ID\s*=\s*'([^']+)'/)[1];
-    const cs  = html.match(/(?:const|var)\s+CLIENT_SECRET\s*=\s*'([^']+)'/)[1];
-    const un  = html.match(/(?:const|var)\s+USERNAME\s*=\s*'([^']+)'/)[1];
-    const pw  = html.match(/(?:const|var)\s+PASSWORD\s*=\s*'([^']+)'/)[1];
-
-    const tokenRes = await fetch(`${BASE}/oauth/v2/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `grant_type=password&client_id=${cid}&client_secret=${cs}&username=${encodeURIComponent(un)}&password=${encodeURIComponent(pw)}`
-    });
-    const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) return res.send('<pre>Auth failed: ' + JSON.stringify(tokenData) + '</pre>');
-    const token = tokenData.access_token;
-
-    const output = [];
-
-    // Грузим все заказы страницами (без фильтра по дате)
-    output.push('=== ЗАГРУЖАЕМ ВСЕ ЗАКАЗЫ ===');
-    let allOrders = [], page = 0, total = 9999;
-    while (allOrders.length < total && page < 20) {
-      const r = await fetch(`${BASE}/api/orders/list`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ perPage: 500, page })
-      });
-      const d = await r.json();
-      const batch = d.data || [];
-      if (d.dataInfo && d.dataInfo.amountItems) total = d.dataInfo.amountItems;
-      if (!batch.length) break;
-      allOrders = allOrders.concat(batch);
-      page++;
-    }
-    output.push('Всего загружено: ' + allOrders.length + ' заказов');
-    output.push('');
-
-    // Собираем все уникальные значения поля status с точным JSON
-    output.push('=== ВСЕ УНИКАЛЬНЫЕ СТАТУСЫ (точный JSON из API) ===');
-    const statusMap = {};
-    for (const o of allOrders) {
-      const raw = JSON.stringify(o.status);
-      statusMap[raw] = (statusMap[raw] || 0) + 1;
-    }
-    const sorted = Object.entries(statusMap).sort((a, b) => b[1] - a[1]);
-    for (const [raw, cnt] of sorted) {
-      output.push('  ' + cnt + 'x  →  ' + raw);
-    }
-
-    // Отдельно показываем примеры заказов где статус содержит "last" или "work"
-    output.push('');
-    output.push('=== ПРИМЕРЫ ЗАКАЗОВ СО СТАТУСОМ СОДЕРЖАЩИМ "last" ===');
-    const lastOrders = allOrders.filter(o => JSON.stringify(o.status).toLowerCase().includes('last'));
-    output.push('Найдено: ' + lastOrders.length);
-    for (const o of lastOrders.slice(0, 3)) {
-      output.push('  order_code_referral=' + o.order_code_referral +
-                  '  status=' + JSON.stringify(o.status) +
-                  '  status_id=' + o.status_id);
-    }
-
-    res.send('<pre style="font-size:13px;background:#111;color:#0f0;padding:20px;white-space:pre-wrap;line-height:1.8;">' + output.join('\n') + '</pre>');
-  } catch (e) {
-    res.send('<pre>Error: ' + e.message + '\n' + e.stack + '</pre>');
-  }
-});
-
-// --- Дебиторская задолженность: CSV из Google Таблицы (публикация "Опубликовать в интернете") ---
-// Ссылки видны только серверу, в браузер клиента не попадают.
-// Вставьте сюда 3 ссылки вида https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=...&single=true&output=csv
-const AR_CSV_URLS = {
+// Google Таблицы (CSV). Видны только серверу.
+const SHEET_CSV_URLS = {
   all:     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRGaJ9psIimNc-Zc6_hPIcm2JHaAomf3sfHM2Z6NPqRKr-1N4yV8KY0-vVsNXFmsaZZxn0Cfw96uw2r/pub?gid=688805559&single=true&output=csv',
   nogrohe: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRGaJ9psIimNc-Zc6_hPIcm2JHaAomf3sfHM2Z6NPqRKr-1N4yV8KY0-vVsNXFmsaZZxn0Cfw96uw2r/pub?gid=1446776803&single=true&output=csv',
-  grohe:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vRGaJ9psIimNc-Zc6_hPIcm2JHaAomf3sfHM2Z6NPqRKr-1N4yV8KY0-vVsNXFmsaZZxn0Cfw96uw2r/pub?gid=2001779062&single=true&output=csv'
+  grohe:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vRGaJ9psIimNc-Zc6_hPIcm2JHaAomf3sfHM2Z6NPqRKr-1N4yV8KY0-vVsNXFmsaZZxn0Cfw96uw2r/pub?gid=2001779062&single=true&output=csv',
+  plan:    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRO65na9Yg8lkkUfMMm4pJKG4jhg-_CgMsFVOXoQVQ9X-OrZtPI2ml5vZkdvGfnE6xICyrsa1UgdSg7/pub?gid=1774379741&single=true&output=csv'
 };
 
-app.get('/proxy-sheet/:sheet', async (req, res) => {
-  const key = req.params.sheet;
-  const url = AR_CSV_URLS[key];
-  if (!url || url.indexOf('PASTE_LINK') === 0) {
-    return res.status(500).json({ error: 'CSV-ссылка для "' + key + '" ещё не настроена в server.js (AR_CSV_URLS)' });
-  }
-  try {
-    const r = await fetch(url, { cache: 'no-store' });
-    if (!r.ok) throw new Error('Sheet fetch failed: ' + r.status);
-    const text = await r.text();
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(text);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+// ---------- ПАРОЛЬ НА САЙТ (проверка на сервере, вход запоминается на 30 дней) ----------
+const AUTH_TOKEN = crypto.createHash('sha256').update('lazarus-live:' + DASH_PASSWORD).digest('hex');
+function isAuthed(req) {
+  const m = (req.headers.cookie || '').match(/(?:^|;\s*)lz_live=([a-f0-9]+)/);
+  return !!m && m[1] === AUTH_TOKEN;
+}
+app.post('/login', (req, res) => {
+  if (String((req.body && req.body.password) || '') !== DASH_PASSWORD) return res.status(401).json({ error: 'Неверный пароль' });
+  const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `lz_live=${AUTH_TOKEN}; Path=/; Max-Age=${30 * 24 * 3600}; HttpOnly; SameSite=Lax${secure}`);
+  res.json({ ok: true });
 });
+app.get('/auth-check', (req, res) => res.json({ ok: isAuthed(req) }));
+const needAuth = (req, res, next) => isAuthed(req) ? next() : res.status(401).json({ error: 'auth' });
 
-app.all('/proxy/*', async (req, res) => {
-  const apiPath = req.params[0];
-  const url = `${BASE}/${apiPath}`;
+// ---------- 4LOGIST: токен получает сервер сам ----------
+let token = null;
+async function getToken() {
+  const r = await fetch(`${BASE}/oauth/v2/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=password&client_id=${encodeURIComponent(CLIENT_ID)}&client_secret=${encodeURIComponent(CLIENT_SECRET)}&username=${encodeURIComponent(USERNAME)}&password=${encodeURIComponent(PASSWORD)}`
+  });
+  const d = await r.json();
+  if (!d.access_token) throw new Error('4logist: не удалось авторизоваться');
+  token = d.access_token;
+  return token;
+}
+// Разрешены только запросы чтения списков: api/orders/list, api/users/list, api/clients/list
+app.post('/proxy/api/:entity/list', needAuth, async (req, res) => {
+  if (!['orders', 'users', 'clients'].includes(req.params.entity)) return res.status(403).json({ error: 'forbidden' });
+  const url = `${BASE}/api/${req.params.entity}/list`;
   try {
-    const headers = { 'Content-Type': req.headers['content-type'] || 'application/json' };
-    if (req.headers['authorization']) headers['Authorization'] = req.headers['authorization'];
-    const options = { method: req.method, headers };
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      options.body = req.headers['content-type']?.includes('urlencoded')
-        ? new URLSearchParams(req.body).toString()
-        : JSON.stringify(req.body);
-    }
-    const r = await fetch(url, options);
-    const text = await r.text();
-    res.status(r.status);
-    r.headers.forEach((v, k) => {
-      if (!['content-encoding','transfer-encoding','connection'].includes(k)) res.setHeader(k, v);
-    });
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(text);
+    const call = async () => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (token || await getToken()) }, body: JSON.stringify(req.body || {}) });
+    let r = await call();
+    if (r.status === 401) { token = null; r = await call(); }
+    res.status(r.status).type('application/json').send(await r.text());
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.use(express.static(path.join(__dirname)));
+// ---------- Google Таблицы ----------
+app.get('/proxy-sheet/:sheet', needAuth, async (req, res) => {
+  const url = SHEET_CSV_URLS[req.params.sheet];
+  if (!url) return res.status(404).json({ error: 'Нет такой таблицы' });
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('Sheet fetch failed: ' + r.status);
+    res.type('text/csv; charset=utf-8').send(await r.text());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Отдаём только страницу. Остальные файлы (server.js и т.д.) наружу не отдаются.
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

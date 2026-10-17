@@ -112,15 +112,14 @@
 <div class="foot" id="main-foot">Lazarus Forwarding · Живой дашборд · 4logist API</div>
 </div>
 <script>
-var DASHBOARD_PASSWORD='5858';
-function checkPass(){if(document.getElementById('gate-input').value===DASHBOARD_PASSWORD){sessionStorage.setItem('lz-auth','1');document.getElementById('login-gate').style.display='none';document.querySelector('.page').style.display='block';}else{document.getElementById('gate-error').textContent='Неверный пароль';document.getElementById('gate-input').value='';}}
-window.addEventListener('DOMContentLoaded',function(){if(sessionStorage.getItem('lz-auth')==='1'){document.getElementById('login-gate').style.display='none';}else{document.querySelector('.page').style.display='none';setTimeout(function(){document.getElementById('gate-input').focus()},100);}});
+// Пароль проверяет сервер. В коде страницы пароля нет.
+function showPage(){document.getElementById('login-gate').style.display='none';document.querySelector('.page').style.display='block';}
+function showGate(){document.getElementById('login-gate').style.display='flex';document.querySelector('.page').style.display='none';setTimeout(function(){document.getElementById('gate-input').focus()},100);}
+function checkPass(){var inp=document.getElementById('gate-input');fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:inp.value})}).then(function(r){if(r.ok){document.getElementById('gate-error').textContent='';showPage();}else{document.getElementById('gate-error').textContent='Неверный пароль';inp.value='';}});}
+window.addEventListener('DOMContentLoaded',function(){document.querySelector('.page').style.display='none';fetch('/auth-check',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){if(d.ok)showPage();else showGate();}).catch(showGate);});
 </script>
 <script>
-var CLIENT_ID     = '1bjgh8arbb1coccosockkkc4sskwoc4gos8koggos04kc0w484';
-var CLIENT_SECRET = '65uax2lgcko48cwkg4c00cg080g8ks8484wc4k04ssgoksk0sg';
-var USERNAME      = 'Artjom_H';
-var PASSWORD      = 'LazarusAH2025';
+// Доступы к 4logist хранятся на сервере (server.js), в браузер не попадают.
 
 var G='#00e5a0',B='#3d9eff',P='#a78bfa',O='#ffac45',R='#ff5e6c';
 var TIP={backgroundColor:'#111d32',borderColor:'#253857',borderWidth:1,titleColor:'#8fa3bf',bodyColor:'#dde5f2',padding:10};
@@ -128,7 +127,7 @@ Chart.defaults.color='#4d6280';Chart.defaults.font.size=10;
 var token=null,charts={},usersMap={},clientsMap={};
 // --- ПЛАН (Google Таблица, лист "Plan_дашборд": month | plan_freight | plan_profit) ---
 // Ссылка одна на всех пользователей — меняется только здесь, в коде.
-var PLAN_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vRO65na9Yg8lkkUfMMm4pJKG4jhg-_CgMsFVOXoQVQ9X-OrZtPI2ml5vZkdvGfnE6xICyrsa1UgdSg7/pub?gid=1774379741&single=true&output=csv';
+var PLAN_CSV_URL='/proxy-sheet/plan'; // ссылка на таблицу хранится на сервере
 var planMap={};
 var planMgrKeys=[]; // список инициалов менеджеров, найденных в шапке гугл-таблицы (plan_profit_XX)
 function parseCsvLine(line){var res=[],cur='',inQ=false;for(var i=0;i<line.length;i++){var ch=line[i];if(inQ){if(ch==='"'){if(line[i+1]==='"'){cur+='"';i++;}else{inQ=false;}}else cur+=ch;}else{if(ch==='"')inQ=true;else if(ch===','){res.push(cur);cur='';}else cur+=ch;}}res.push(cur);return res;}
@@ -255,8 +254,8 @@ function setWeek(){var n=new Date(),d=n.getDay()||7,m=new Date(n);m.setDate(n.ge
 function setPrevWeek(){var n=new Date(),d=n.getDay()||7,m=new Date(n);m.setDate(n.getDate()-d-6);var s=new Date(m);s.setDate(m.getDate()+6);document.getElementById('date-from').value=m.toISOString().slice(0,10);document.getElementById('date-to').value=s.toISOString().slice(0,10);}
 function setMonth(){var n=new Date();document.getElementById('date-from').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-01';document.getElementById('date-to').value=n.toISOString().slice(0,10);}
 function setStatus(type,text){var bar=document.getElementById('status-bar');document.getElementById('status-text').textContent=text;bar.className='status-bar '+type;var icon=document.getElementById('status-icon');icon.textContent=type==='loading'?'\u27F3':type==='success'?'\u2713':'\u2715';icon.className=type==='loading'?'spin':'';if(type==='success')setTimeout(function(){bar.className='status-bar hidden';},4000);}
-function getToken(){var body='grant_type=password&client_id='+CLIENT_ID+'&client_secret='+CLIENT_SECRET+'&username='+encodeURIComponent(USERNAME)+'&password='+encodeURIComponent(PASSWORD);return fetch('/proxy/oauth/v2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body}).then(function(r){if(!r.ok)throw new Error('Auth:'+r.status);return r.json();}).then(function(d){if(!d.access_token)throw new Error('No token');token=d.access_token;return token;});}
-function apiPost(path,payload){if(!token)return getToken().then(function(){return apiPost(path,payload);});return fetch('/proxy/'+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(payload)}).then(function(r){if(r.status===401){token=null;return getToken().then(function(){return apiPost(path,payload);});}if(!r.ok)throw new Error('API '+path+':'+r.status);return r.json();});}
+function getToken(){token='server';return Promise.resolve(token);} // токен 4logist получает сервер
+function apiPost(path,payload){return fetch('/proxy/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){if(r.status===401){showGate();throw new Error('Нужно войти заново');}if(!r.ok)throw new Error('API '+path+':'+r.status);return r.json();});}
 function loadRefData(){var uP=0,cP=0,allU=[],allC=[];function loadUsers(){return apiPost('api/users/list',{perPage:200,page:uP}).then(function(r){var b=r.data||r||[];if(Array.isArray(b)&&b.length>0){allU=allU.concat(b);uP++;if(uP<10)return loadUsers();}allU.forEach(function(u){usersMap[u.id]=u.name||u.full_name||u.username||('User '+u.id);});usersMap[31]='Artjoms Hondozko';});}function loadClients(){return apiPost('api/clients/list',{perPage:200,page:cP}).then(function(r){var b=r.data||r||[];if(Array.isArray(b)&&b.length>0){allC=allC.concat(b);cP++;if(cP<10)return loadClients();}allC.forEach(function(c){clientsMap[c.id]=c.company_name||c.company_name_original||c.short_name||c.name||('Client '+c.id);});});}return Promise.all([loadUsers(),loadClients()]).catch(function(e){console.warn('Ref error:',e);});}
 function getUserName(id){return usersMap[id]||(id==31?'Artjoms Hondozko':'User '+id);}
 function getClientName(id){return clientsMap[id]||('Client '+id);}
