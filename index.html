@@ -72,7 +72,7 @@
 <div class="block"><div class="block-hdr"><div class="block-num">2</div><div class="block-title">Заказы периода</div><div class="block-sub" id="orders-period-label-inv"></div></div>
 <div class="card" style="overflow-x:auto;"><div id="orders-table-inv"></div></div></div>
 <div class="block"><div class="block-hdr"><div class="block-num">3</div><div class="block-title">Аналитика</div></div><div class="g2"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры · фрахт vs прибыль</div><div class="chart-box" style="height:180px;"><canvas id="mgrChartInv"></canvas></div></div><div class="card"><div class="ch"><span class="dot do"></span>Клиенты · топ по прибыли</div><div id="cli-table-inv"></div></div></div></div>
-<div class="foot" id="invoice-foot" style="margin-top:0;">Заказ засчитан, если любой из его счетов выставлен в выбранный период (как в фильтре 4Logist «Счёт выписан»)</div>
+<div class="foot" id="invoice-foot" style="margin-top:0;">Заказ засчитан по дате ПЕРВОГО счёта: если у заказа несколько счетов, он попадает только в период, где выставлен самый ранний из них</div>
 </div>
 </div>
 <div id="empty-state" class="card empty-state"><div style="font-size:32px;margin-bottom:10px;opacity:.5;">📊</div><div style="font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:6px;">Выберите период и нажмите «Загрузить»</div><div>Данные загружаются напрямую из 4logist</div></div>
@@ -265,7 +265,8 @@ getToken().then(function(){setStatus('loading','Загружаем справо�
 return loadPage().then(function(){DATE_KEY=pickDateKey(allOrders);
 
   var orders=allOrders.filter(function(o){var d=orderDateStr(o);if(!d||d.length<10)return false;return d>=df&&d<=dt;});
-var invOrders=allOrders.filter(function(o){return orderInvoiceDatesInRange(o,df,dt).length>0;});
+// Заказ относится только к месяцу ПЕРВОГО счёта (самая ранняя дата среди всех его счетов)
+var invOrders=allOrders.filter(function(o){var d=orderInvoiceDateStr(o);return d.length===10&&d>=df&&d<=dt;});
 renderDashboard(orders,df,dt,allOrders);renderInvoiceDashboard(invOrders,df,dt);mainTabLoaded=true;setStatus('success','Заказы (по дате заказа): '+orders.length+' · Счета (по дате счёта): '+invOrders.length);document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');var ft=document.getElementById('main-foot');if(ft)ft.innerHTML='Lazarus Forwarding · Живой дашборд · 4logist API<br>Фильтр по дате заказа: поле «'+DATE_KEY+'» · найдено '+orders.length+' заказов за период';document.getElementById('content').style.display='block';});}).catch(function(e){setStatus('error','Ошибка: '+e.message);document.getElementById('empty-state').style.display='block';document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';}).finally(function(){btn.disabled=false;});}
 
 function renderDashboard(orders,df,dt,allOrders){
@@ -434,7 +435,7 @@ function renderInvoiceDashboard(orders,df,dt){
     var marginCell=fr2>0?Math.round(rowMargin)+'%'+(rowMargin>20?' \u26A0':''):'0%';
     var marginColor=rowMargin>20?'color:#ff5e6c;font-weight:900;':'color:var(--ink2);';
     var expCell=o.logistician_id?getExpName(o.logistician_id):'\u2014';
-    var invDate=orderInvoiceDatesInRange(o,df,dt).join(', ')||orderInvoiceDateStr(o);
+    var invDate=orderInvoiceDateStr(o);
     return '<tr style="'+rowStyle+'"><td class="ono">'+code+'</td><td><div class="ocl">'+getClientName(o.client_id).slice(0,25)+'</div></td><td class="osb">'+getUserName(o.user_id||o.logistician_id)+'</td><td class="osb">'+expCell+'</td><td class="osb">'+invDate+'</td><td><span class="sb '+sc+'">'+stName2+'</span></td><td class="r ofr">'+eur(fr2)+'</td><td class="r osb">'+eur(ex2)+'</td><td class="r opr">'+eur(pr2)+'</td><td class="r" style="'+marginColor+'font-variant-numeric:tabular-nums">'+marginCell+'</td></tr>';
   }).join('');
   if(orders.length>50)ordRows+='<tr><td colspan="10" style="text-align:center;color:var(--mut);padding:10px;font-size:11px">... ещё '+(orders.length-50)+' заказов</td></tr>';
