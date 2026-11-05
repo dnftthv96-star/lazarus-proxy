@@ -26,6 +26,19 @@
 .tabs-nav{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}.tab-btn{background:var(--card);border:1px solid var(--border);color:var(--ink2);border-radius:10px;padding:9px 18px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}.tab-btn.active{background:var(--gd);border-color:rgba(0,229,160,.35);color:var(--green);}
 .sub-tabs{display:flex;gap:6px;flex-wrap:wrap;}.sub-tab-btn{background:var(--bg2);border:1px solid var(--border2);color:var(--ink2);border-radius:8px;padding:7px 14px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;}.sub-tab-btn.active{background:var(--bd);border-color:rgba(61,158,255,.35);color:var(--blue);}
 .top-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:11.5px;}.top-bar-name{width:150px;flex:none;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.top-bar-track{flex:1;height:16px;background:var(--bg2);border-radius:4px;overflow:hidden;}.top-bar-fill{height:100%;border-radius:4px;}.top-bar-val{width:78px;flex:none;text-align:right;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;}
+.ins{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px 16px;margin-bottom:10px}
+.ins-h{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);margin-bottom:8px}
+.ins-g{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px}
+.ins-col h4{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin:8px 0 2px}
+.ins-i{display:flex;gap:9px;align-items:flex-start;padding:5px 0;font-size:12.5px;line-height:1.5;color:var(--ink2);border-top:1px solid var(--border)}
+.ins-i b{color:var(--ink)}
+.ins-d{flex:none;width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--blue)}
+.ins-good .ins-d{background:var(--green)}.ins-warn .ins-d{background:var(--orange)}.ins-bad .ins-d{background:var(--red)}
+.ins-s{color:var(--mut);font-size:11.5px}
+.ins-up{color:var(--green);font-weight:700}.ins-dn{color:var(--red);font-weight:700}
+.ins-rec{background:var(--bg2);border-radius:10px;padding:8px 12px;margin-bottom:6px}
+.ins-rec .ins-i:first-child{border-top:none}
+@media(max-width:800px){.ins-g{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -49,6 +62,7 @@
 <div class="status-bar hidden" id="status-bar"><span id="status-icon"></span><span id="status-text"></span></div>
 <div id="content" style="display:none;">
 <div id="tab-orders" class="tab-panel">
+<div id="ins-orders"></div>
 <div class="block"><div class="block-hdr"><div class="block-num">1</div><div class="block-title">Текущий период</div><div class="block-sub" id="period-label"></div></div>
 <div class="kpi-row"><div class="kpi"><div class="kv" id="k-count" style="color:var(--blue)">—</div><div class="kl">Заказов</div><div class="kd" id="k-count-d"></div></div><div class="kpi"><div class="kv" id="k-freight" style="color:var(--ink)">—</div><div class="kl">Фрахт</div><div class="kd" id="k-freight-d"></div></div><div class="kpi"><div class="kv" id="k-expenses" style="color:var(--red)">—</div><div class="kl">Расходы</div><div class="kd" id="k-expenses-d"></div></div><div class="kpi"><div class="kv" id="k-profit" style="color:var(--green)">—</div><div class="kl">Прибыль</div><div class="kd" id="k-margin-d"></div></div></div>
 <div class="g2" id="plan-block" style="margin-bottom:10px;display:none;"><div class="card"><div class="ch"><span class="dot db"></span>План-факт · Фрахт</div><div id="plan-freight-body"></div></div><div class="card"><div class="ch"><span class="dot dg"></span>План-факт · Прибыль</div><div id="plan-profit-body"></div></div></div>
@@ -72,7 +86,7 @@
 <div class="block"><div class="block-hdr"><div class="block-num">2</div><div class="block-title">Заказы периода</div><div class="block-sub" id="orders-period-label-inv"></div></div>
 <div class="card" style="overflow-x:auto;"><div id="orders-table-inv"></div></div></div>
 <div class="block"><div class="block-hdr"><div class="block-num">3</div><div class="block-title">Аналитика</div></div><div class="g2"><div class="card"><div class="ch"><span class="dot dg"></span>Менеджеры · фрахт vs прибыль</div><div class="chart-box" style="height:180px;"><canvas id="mgrChartInv"></canvas></div></div><div class="card"><div class="ch"><span class="dot do"></span>Клиенты · топ по прибыли</div><div id="cli-table-inv"></div></div></div></div>
-<div class="foot" id="invoice-foot" style="margin-top:0;">Заказ засчитан по дате ПЕРВОГО счёта: если у заказа несколько счетов, он попадает только в период, где выставлен самый ранний из них</div>
+<div class="foot" id="invoice-foot" style="margin-top:0;">Заказ засчитан, если любой из его счетов выставлен в выбранный период (как в фильтре 4Logist «Счёт выписан»)</div>
 </div>
 </div>
 <div id="empty-state" class="card empty-state"><div style="font-size:32px;margin-bottom:10px;opacity:.5;">📊</div><div style="font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:6px;">Выберите период и нажмите «Загрузить»</div><div>Данные загружаются напрямую из 4logist</div></div>
@@ -84,6 +98,7 @@
 </div></div><div class="ctrl-sep"></div><div class="ctrl-group"><span class="ctrl-label">Дата</span><select id="ar-period-select" class="ctrl-input" onchange="onArPeriodChange()"></select></div><div class="ctrl-sep"></div><button class="ctrl-btn" id="ar-load-btn" onclick="loadReceivables(true)">⟳ Обновить</button></div>
 <div class="status-bar hidden" id="ar-status-bar"><span id="ar-status-icon"></span><span id="ar-status-text"></span></div>
 <div id="ar-content" style="display:none;">
+<div id="ins-ar"></div>
 <div class="block"><div class="block-hdr"><div class="block-num">1</div><div class="block-title">Текущее состояние</div><div class="block-sub" id="ar-period-label"></div></div>
 <div class="kpi-row">
 <div class="kpi"><div class="kv" id="ar-k-total" style="color:var(--blue)">—</div><div class="kl">Общая ДЗ</div><div class="kd" id="ar-k-total-d"></div></div>
@@ -265,8 +280,7 @@ getToken().then(function(){setStatus('loading','Загружаем справо�
 return loadPage().then(function(){DATE_KEY=pickDateKey(allOrders);
 
   var orders=allOrders.filter(function(o){var d=orderDateStr(o);if(!d||d.length<10)return false;return d>=df&&d<=dt;});
-// Заказ относится только к месяцу ПЕРВОГО счёта (самая ранняя дата среди всех его счетов)
-var invOrders=allOrders.filter(function(o){var d=orderInvoiceDateStr(o);return d.length===10&&d>=df&&d<=dt;});
+var invOrders=allOrders.filter(function(o){return orderInvoiceDatesInRange(o,df,dt).length>0;});
 renderDashboard(orders,df,dt,allOrders);renderInvoiceDashboard(invOrders,df,dt);mainTabLoaded=true;setStatus('success','Заказы (по дате заказа): '+orders.length+' · Счета (по дате счёта): '+invOrders.length);document.getElementById('last-update').textContent='Обновлено: '+new Date().toLocaleTimeString('ru');var ft=document.getElementById('main-foot');if(ft)ft.innerHTML='Lazarus Forwarding · Живой дашборд · 4logist API<br>Фильтр по дате заказа: поле «'+DATE_KEY+'» · найдено '+orders.length+' заказов за период';document.getElementById('content').style.display='block';});}).catch(function(e){setStatus('error','Ошибка: '+e.message);document.getElementById('empty-state').style.display='block';document.getElementById('empty-state').innerHTML='<div style="font-size:32px;margin-bottom:10px">⚠</div><div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:6px">Ошибка загрузки</div><div style="color:var(--mut);font-size:12px">'+e.message+'</div>';}).finally(function(){btn.disabled=false;});}
 
 function renderDashboard(orders,df,dt,allOrders){
@@ -352,6 +366,7 @@ function renderDashboard(orders,df,dt,allOrders){
   document.getElementById('k-margin-d').className='kd '+(mg>15?'up':'dn');
   renderPlanBlock(df,dt,totalFr,totalPr,allOrders);
   renderMgrPlanBlock(df,dt,mgrMap);
+  try{renderOrderInsights(orders,df,dt,allOrders,mgrMap,cliMap,activeMap);}catch(e){console.error('insights',e);}
   var stCls={'In work':'piw','Ordered and scheduled':'pos','Ordered':'pos','Delivered':'pdl','Finished':'pdl','In work last step':'pls','IN WORK LAST STEP':'pls'};
   document.getElementById('status-pills').innerHTML=Object.entries(stMap).map(function(e){return '<div class="pill '+(stCls[e[0]]||'piw')+'"><span class="pdot"></span>'+e[0]+'<span class="pc">'+e[1]+'</span></div>';}).join('');
   // Managers
@@ -387,6 +402,99 @@ function renderDashboard(orders,df,dt,allOrders){
   charts['mgrChart']=new Chart(document.getElementById('mgrChart'),{type:'bar',data:{labels:ms.map(function(e){return e[0].split(' ')[0];}),datasets:[{label:'Фрахт',data:ms.map(function(e){return Math.round(e[1].fr);}),backgroundColor:B+'55',borderColor:B,borderWidth:1,borderRadius:4},{label:'Прибыль',data:ms.map(function(e){return Math.round(e[1].pr);}),backgroundColor:G+'88',borderColor:G,borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8fa3bf',boxWidth:8,padding:10,font:{size:9}}},tooltip:{backgroundColor:'#111d32',borderColor:'#253857',borderWidth:1,callbacks:{label:function(c){return ' '+c.dataset.label+': \u20AC'+c.parsed.y.toLocaleString();}}}},scales:{x:{grid:{color:'#1e2f4a'},ticks:{color:'#4d6280',font:{size:9}}},y:{grid:{color:'#1e2f4a'},ticks:{color:'#4d6280',callback:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v;}}}}}});
   var cs=Object.entries(cliMap).sort(function(a,b){return b[1].pr-a[1].pr;}).slice(0,15);
   document.getElementById('cli-table').innerHTML='<table class="utbl"><thead><tr><th>Клиент</th><th>Зак.</th><th>Фрахт</th><th>Прибыль</th><th>Маржа</th></tr></thead><tbody>'+cs.map(function(e){var c=e[0],v=e[1];return '<tr><td>'+c.slice(0,22)+'</td><td style="text-align:right;font-weight:800;color:var(--ink)">'+v.n+'</td><td>'+eur(v.fr)+'</td><td class="pr-g">'+eur(v.pr)+'</td><td>'+(v.fr>0?Math.round(v.pr/v.fr*100):0)+'%</td></tr>';}).join('')+'<tr class="tot"><td>Итого</td><td style="text-align:right">'+orders.length+'</td><td>'+eur(totalFr)+'</td><td class="pr-g">'+eur(totalPr)+'</td><td>'+mg+'%</td></tr></tbody></table>';
+}
+
+// ================= ИТОГИ И РЕКОМЕНДАЦИИ (по формулам, без ИИ) =================
+var INS_CFG={growGood:0.05,dropBad:-0.10,marginPP:2,top3Share:0.5,expLoad:1.5,overdueShare:0.3,d60Share:0.15};
+function insI(t,h){return '<div class="ins-i ins-'+t+'"><span class="ins-d"></span><div>'+h+'</div></div>';}
+function insChg(a,b){if(!b)return null;return (a-b)/Math.abs(b);}
+function insPct(c,inv){if(c==null||!isFinite(c))return '';var good=inv?c<=0:c>=0;return ' <span class="'+(good?'ins-up':'ins-dn')+'">'+(c>0?'+':'')+Math.round(c*100)+'%</span>';}
+function insPP(a,b,inv){if(a==null||b==null)return '';var d=a-b;var good=inv?d<=0:d>=0;return ' <span class="'+(good?'ins-up':'ins-dn')+'">'+(d>0?'+':'')+d.toFixed(1).replace('.',',')+' п.п.</span>';}
+function insT(c){return c==null?'info':c>=INS_CFG.growGood?'good':c<=INS_CFG.dropBad?'bad':'info';}
+function insE(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function insBlock(title,recs,cols){
+  return '<div class="ins"><div class="ins-h"><span class="dot dg"></span>'+title+'</div>'+
+    '<div class="ins-rec">'+(recs.length?recs.join(''):insI('good','Существенных отклонений не найдено.'))+'</div>'+
+    '<div class="ins-g">'+cols.map(function(c){return '<div class="ins-col"><h4>'+c[0]+'</h4>'+(c[1].join('')||insI('info','Нет данных'))+'</div>';}).join('')+'</div></div>';
+}
+function insDate(d){return d.toISOString().slice(0,10);}
+function renderOrderInsights(orders,df,dt,allOrders,mgrMap,cliMap,activeMap){
+  var el=document.getElementById('ins-orders');if(!el)return;
+  var D0=new Date(df+'T00:00:00'),D1=new Date(dt+'T00:00:00'),L=Math.round((D1-D0)/864e5)+1;
+  var pDf=insDate(new Date(D0.getTime()-L*864e5)),pDt=insDate(new Date(D0.getTime()-864e5));
+  var all=allOrders||orders;
+  var prevO=all.filter(function(o){var d=orderDateStr(o);return d>=pDf&&d<=pDt;});
+  var cur=computeTotals(orders),pr=computeTotals(prevO);
+  var mg=cur.fr?cur.pr/cur.fr*100:null,pmg=pr.fr?pr.pr/pr.fr*100:null;
+  var recs=[],c1=[],c2=[],c3=[];
+  var pl=new Date(pDf+'T00:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'})+' — '+new Date(pDt+'T00:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'});
+  // итоги
+  var ch=insChg(cur.pr,pr.pr);
+  c1.push(insI(insT(ch),'Прибыль <b>'+eur(cur.pr)+'</b>'+insPct(ch)+' к прошлому такому же периоду<div class="ins-s">'+pl+': '+eur(pr.pr)+'</div>'));
+  ch=insChg(cur.fr,pr.fr);c1.push(insI(insT(ch),'Фрахт <b>'+eur(cur.fr)+'</b>'+insPct(ch)+' · заказов <b>'+cur.n+'</b> (было '+pr.n+')'));
+  c1.push(insI(mg!=null&&pmg!=null&&mg<pmg-1?'warn':'info','Маржа <b>'+(mg!=null?mg.toFixed(1).replace('.',','):'—')+'%</b>'+insPP(mg,pmg)));
+  if(mg!=null&&pmg!=null&&mg<pmg-1)recs.push(insI('bad','Маржа снизилась'+insPP(mg,pmg)+' к прошлому периоду — проверьте ставки субподрядчиков в новых заказах.'));
+  // план и темп
+  var months=monthsInRange(df,dt),today=new Date();
+  if(months.length===1&&planMap[months[0]]&&df.slice(8,10)==='01'){
+    var y=+months[0].slice(0,4),m=+months[0].slice(5),dim=new Date(y,m,0).getDate();
+    var lastDay=Math.min(D1.getTime(),today.getTime()),passed=Math.max(1,Math.min(dim,new Date(lastDay).getDate()));
+    var isCur=today.getFullYear()===y&&today.getMonth()+1===m;
+    var P=planMap[months[0]],fr=passed/dim;
+    if(P.pr>0){var done=cur.pr/P.pr,fc=isCur?cur.pr/fr:cur.pr;
+      c1.push(insI(fc>=P.pr?'good':fc>=P.pr*0.9?'warn':'bad','План по прибыли '+eur(P.pr)+': выполнено <b>'+Math.round(done*100)+'%</b>'+(isCur?'<div class="ins-s">прошло '+passed+' из '+dim+' дней · при таком темпе к концу месяца будет <b>'+eur(fc)+'</b> ('+Math.round(fc/P.pr*100)+'% плана)</div>':'')));
+      if(isCur&&passed>=7&&fc<P.pr*0.9)recs.push(insI('warn','При текущем темпе план по прибыли будет выполнен на '+Math.round(fc/P.pr*100)+'%. Чтобы выйти на план, нужно ещё '+eur(P.pr-cur.pr)+' за '+(dim-passed)+' дн.'));}
+    if(P.mgr&&planMgrKeys.length){var fk={};Object.keys(mgrMap||{}).forEach(function(n){var k=nameInitials(n);fk[k]=(fk[k]||0)+mgrMap[n].pr;});
+      planMgrKeys.forEach(function(k){var pp=P.mgr[k]||0;if(pp<=0)return;var f=fk[k]||0,fc2=isCur?f/fr:f;
+        if((!isCur||passed>=7)&&fc2<pp*0.8)recs.push(insI('warn','Менеджер '+k+': план '+eur(pp)+', '+(isCur?'прогноз ':'факт ')+eur(fc2)+' ('+Math.round(fc2/pp*100)+'%).'));});}
+  }
+  // менеджеры
+  var pm={};prevO.forEach(function(o){var n=getUserName(o.user_id||o.logistician_id);var ex=parseFloat(o.cost||0),p=parseFloat(o.profit||0);if(!pm[n])pm[n]={pr:0,n:0};pm[n].pr+=p;pm[n].n++;});
+  Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].pr-mgrMap[a].pr;}).forEach(function(n){var v=mgrMap[n],m2=v.fr?v.pr/v.fr*100:null,p=pm[n],c=p?insChg(v.pr,p.pr):null,low=m2!=null&&mg!=null&&m2<mg-INS_CFG.marginPP;
+    c2.push(insI(low?'warn':insT(c),'<b>'+insE(n)+'</b>: прибыль '+eur(v.pr)+insPct(c)+'<div class="ins-s">заказов '+v.n+(p?' (было '+p.n+')':'')+' · маржа '+(m2!=null?m2.toFixed(1).replace('.',','):'—')+'%'+(low?' — ниже средней':'')+'</div>'));
+    if(c!=null&&c<=-0.3&&p.pr>500)recs.push(insI('warn','Прибыль '+insE(n)+' снизилась'+insPct(c)+' ('+eur(p.pr)+' → '+eur(v.pr)+').'));});
+  // экспедиторы
+  var ex=Object.keys(activeMap||{}).filter(function(n){return n!=='Не назначен';}),tot=0;ex.forEach(function(n){tot+=activeMap[n].total;});var avg=ex.length?tot/ex.length:0;
+  ex.forEach(function(n){var t=activeMap[n].total;if(avg&&t>=5&&t>avg*INS_CFG.expLoad){c2.push(insI('warn','Экспедитор <b>'+insE(n)+'</b>: '+t+' активных заказов при среднем '+Math.round(avg)));recs.push(insI('warn','У '+insE(n)+' '+t+' активных заказов — в '+(t/avg).toFixed(1).replace('.',',')+' раза больше среднего. Стоит перераспределить.'));}});
+  if(activeMap&&activeMap['Не назначен']){c2.push(insI('warn','Активных заказов без экспедитора: <b>'+activeMap['Не назначен'].total+'</b>'));recs.push(insI('warn','Назначить экспедитора на '+activeMap['Не назначен'].total+' активных заказов.'));}
+  // клиенты
+  var cl=Object.keys(cliMap).sort(function(a,b){return cliMap[b].pr-cliMap[a].pr;});
+  if(cl.length&&cur.pr>0){var t3=cl.slice(0,3).reduce(function(s,n){return s+cliMap[n].pr;},0),sh=t3/cur.pr;
+    c3.push(insI(sh>INS_CFG.top3Share?'warn':'info','Топ-3 клиента дают <b>'+Math.round(sh*100)+'%</b> прибыли<div class="ins-s">'+cl.slice(0,5).map(function(n){return insE(n)+' '+eur(cliMap[n].pr);}).join(' · ')+'</div>'));
+    if(sh>INS_CFG.top3Share)recs.push(insI('warn','Высокая зависимость от трёх клиентов ('+Math.round(sh*100)+'% прибыли).'));}
+  var before={};all.forEach(function(o){var d=orderDateStr(o);if(d&&d<df)before[getClientName(o.client_id)]=1;});
+  var nw=cl.filter(function(n){return !before[n];});if(nw.length)c3.push(insI('good','Новые клиенты: <b>'+nw.length+'</b><div class="ins-s">'+nw.slice(0,6).map(insE).join(' · ')+'</div>'));
+  if(L>=14){var pc={};prevO.forEach(function(o){var n=getClientName(o.client_id);pc[n]=(pc[n]||0)+parseFloat(o.profit||0);});
+    var lost=Object.keys(pc).filter(function(n){return !cliMap[n]&&pc[n]>0;}).sort(function(a,b){return pc[b]-pc[a];});
+    if(lost.length){c3.push(insI('bad','Были в прошлом периоде, в этом нет заказов: <b>'+lost.length+'</b><div class="ins-s">'+lost.slice(0,6).map(function(n){return insE(n)+' ('+eur(pc[n])+')';}).join(' · ')+'</div>'));
+      recs.push(insI('warn','Связаться с клиентами, которые не заказывали в этом периоде: '+lost.slice(0,4).map(insE).join(', ')+'.'));}}
+  var neg=orders.filter(function(o){return parseFloat(o.profit||0)<0;});
+  if(neg.length){var ns=neg.reduce(function(s,o){return s+parseFloat(o.profit||0);},0);c3.push(insI('bad','Убыточных заказов: <b>'+neg.length+'</b> на <b>'+eur(ns)+'</b>'));recs.push(insI('bad','Разобрать '+neg.length+' убыточных заказов на '+eur(ns)+'.'));}
+  var hi=orders.filter(function(o){var e2=parseFloat(o.cost||0),p=parseFloat(o.profit||0);return p+e2>0&&p/(p+e2)>0.2;});
+  if(hi.length)c3.push(insI('info','Заказов с маржой выше 20%: <b>'+hi.length+'</b> — проверьте, что все расходы внесены'));
+  el.innerHTML=insBlock('Итоги и рекомендации',recs,[['Итоги периода',c1],['Менеджеры и экспедиторы',c2],['Клиенты',c3]].filter(function(x){return x[1].length;}));
+}
+function renderArInsights(data,last,prev){
+  var el=document.getElementById('ins-ar');if(!el)return;
+  var m=data.metrics,P=data.periods,co=data.companies,v=function(k,i){return (m[k]||[])[i]||0;};
+  var tot=v('total',last),pt=prev>=0?v('total',prev):null,od=v('overdue',last),pod=prev>=0?v('overdue',prev):null;
+  var sh=tot?od/tot:0,psh=pt?pod/pt:null,d60=v('d60',last),db=v('doubtful',last);
+  var recs=[],c1=[],c2=[];
+  var ch=pt!=null?insChg(tot,pt):null;
+  c1.push(insI(ch!=null&&ch>0.1?'warn':ch!=null&&ch<0?'good':'info','Общая ДЗ <b>'+eur(tot)+'</b>'+insPct(ch,true)+(prev>=0?' к '+insE(P[prev]):'')));
+  c1.push(insI(sh>INS_CFG.overdueShare?'bad':'info','Просроченная <b>'+eur(od)+'</b> — <b>'+Math.round(sh*100)+'%</b> от общей'+(psh!=null?insPP(sh*100,psh*100,true):'')));
+  if(d60)c1.push(insI(tot&&d60/tot>INS_CFG.d60Share?'bad':'warn','Больше 60 дней: <b>'+eur(d60)+'</b> ('+Math.round(tot?d60/tot*100:0)+'%)'));
+  if(db)c1.push(insI('warn','Сомнительная: <b>'+eur(db)+'</b>'));
+  if(sh>INS_CFG.overdueShare)recs.push(insI('bad','Просрочено '+Math.round(sh*100)+'% дебиторки ('+eur(od)+'). Нужен план звонков по крупным должникам.'));
+  if(psh!=null&&sh-psh>0.05)recs.push(insI('warn','Доля просрочки выросла на'+insPP(sh*100,psh*100,true)+' — проверьте, кто перестал платить вовремя.'));
+  if(tot&&d60/tot>INS_CFG.d60Share)recs.push(insI('bad','Долги старше 60 дней — '+eur(d60)+'. Рассмотреть претензии и резерв.'));
+  var srt=co.slice().sort(function(a,b){return (b.values[last]||0)-(a.values[last]||0);});
+  if(srt.length&&tot>0){var t3=srt.slice(0,3).reduce(function(s,c){return s+(c.values[last]||0);},0);
+    c2.push(insI(t3/tot>0.5?'warn':'info','Топ-3 должника — <b>'+Math.round(t3/tot*100)+'%</b> ДЗ<div class="ins-s">'+srt.slice(0,3).map(function(c){return insE(c.name)+' '+eur(c.values[last]||0);}).join(' · ')+'</div>'));}
+  if(prev>=0){var up=co.map(function(c){return {n:c.name,d:(c.values[last]||0)-(c.values[prev]||0)};}).filter(function(x){return x.d>0;}).sort(function(a,b){return b.d-a.d;});
+    if(up.length){c2.push(insI('warn','Долг вырос больше всего:<div class="ins-s">'+up.slice(0,5).map(function(x){return insE(x.n)+' +'+eur(x.d);}).join(' · ')+'</div>'));
+      if(up[0].d>tot*0.05)recs.push(insI('warn','Долг '+insE(up[0].n)+' вырос на '+eur(up[0].d)+'. Проверить оплату и условия.'));}}
+  el.innerHTML=insBlock('Итоги и рекомендации по дебиторке',recs,[['Состояние',c1],['Должники',c2]]);
 }
 // ================= ВКЛАДКА "СЧЁТ" (фильтр по дате первого счёта) =================
 function renderInvoiceDashboard(orders,df,dt){
@@ -435,7 +543,7 @@ function renderInvoiceDashboard(orders,df,dt){
     var marginCell=fr2>0?Math.round(rowMargin)+'%'+(rowMargin>20?' \u26A0':''):'0%';
     var marginColor=rowMargin>20?'color:#ff5e6c;font-weight:900;':'color:var(--ink2);';
     var expCell=o.logistician_id?getExpName(o.logistician_id):'\u2014';
-    var invDate=orderInvoiceDateStr(o);
+    var invDate=orderInvoiceDatesInRange(o,df,dt).join(', ')||orderInvoiceDateStr(o);
     return '<tr style="'+rowStyle+'"><td class="ono">'+code+'</td><td><div class="ocl">'+getClientName(o.client_id).slice(0,25)+'</div></td><td class="osb">'+getUserName(o.user_id||o.logistician_id)+'</td><td class="osb">'+expCell+'</td><td class="osb">'+invDate+'</td><td><span class="sb '+sc+'">'+stName2+'</span></td><td class="r ofr">'+eur(fr2)+'</td><td class="r osb">'+eur(ex2)+'</td><td class="r opr">'+eur(pr2)+'</td><td class="r" style="'+marginColor+'font-variant-numeric:tabular-nums">'+marginCell+'</td></tr>';
   }).join('');
   if(orders.length>50)ordRows+='<tr><td colspan="10" style="text-align:center;color:var(--mut);padding:10px;font-size:11px">... ещё '+(orders.length-50)+' заказов</td></tr>';
@@ -615,6 +723,7 @@ function renderArTab(data,selIdx){
     return '<div class="top-bar-row"><div class="top-bar-name">'+c.name+'</div><div class="top-bar-track"><div class="top-bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div><div class="top-bar-val" style="color:'+col+'">'+sign+eur(c.change)+'</div></div>';
   }).join('')||'<div style="color:var(--mut);font-size:12px;">Нет данных</div>';
   document.getElementById('ar-clients-label').textContent=companies.length+' контрагентов · период: '+periods[last]+(prev>=0?' (изменение к '+periods[prev]+')':'');
+  try{renderArInsights(data,last,prev);}catch(e){console.error('ar insights',e);}
   var sortedByLastWithChange=companiesWithChange.slice().sort(function(a,b){return (b.values[last]||0)-(a.values[last]||0);});
   document.getElementById('ar-all-table').innerHTML='<table class="utbl"><thead><tr><th>Контрагент</th><th>Долг на '+periods[last]+'</th><th>Изменение</th></tr></thead><tbody>'+sortedByLastWithChange.map(function(c){
     var v=c.values[last]||0;var col=c.change<0?'color:var(--green)':c.change>0?'color:var(--red)':'color:var(--ink2)';var sign=c.change>0?'+':'';
