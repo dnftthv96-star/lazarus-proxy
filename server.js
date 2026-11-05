@@ -11,8 +11,8 @@ app.use(express.json());
 
 // ---------- ДОСТУПЫ ----------
 const BASE          = 'https://lazarus.4logist.com';
-const CLIENT_ID     = process.env.LOGIST_CLIENT_ID     || '1bjgh8arbb1coccosockkkc4sskwoc4gos8koggos04kc0w484';
-const CLIENT_SECRET = process.env.LOGIST_CLIENT_SECRET || '65uax2lgcko48cwkg4c00cg080g8ks8484wc4k04ssgoksk0sg';
+const CLIENT_ID     = process.env.LOGIST_CLIENT_ID     || '47F0A9Bc0aaf460158EfaA8DD41bB94371E48383218F1E9dA11e7Ca0A17C89006eDFBefebe946A19';
+const CLIENT_SECRET = process.env.LOGIST_CLIENT_SECRET || '5654DE69A999550aFc0046E5598C1787663b8F4Eec237b200fB0E869C5b70fc701C205Fda4D5d987';
 const USERNAME      = process.env.LOGIST_USERNAME      || 'Artjom_H';
 const PASSWORD      = process.env.LOGIST_PASSWORD      || 'LazarusAH2025';
 const DASH_PASSWORD = process.env.DASHBOARD_PASSWORD   || '5858';   // пароль на сайт
@@ -48,8 +48,14 @@ async function getToken() {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `grant_type=password&client_id=${encodeURIComponent(CLIENT_ID)}&client_secret=${encodeURIComponent(CLIENT_SECRET)}&username=${encodeURIComponent(USERNAME)}&password=${encodeURIComponent(PASSWORD)}`
   });
-  const d = await r.json();
-  if (!d.access_token) throw new Error('4logist: не удалось авторизоваться');
+  const text = await r.text();
+  let d = {}; try { d = JSON.parse(text); } catch (e) {}
+  if (!d.access_token) {
+    // показываем точную причину от 4logist (неверный ключ, логин или пароль)
+    const why = [d.error, d.error_description, d.message].filter(Boolean).join(' — ') || ('ответ ' + r.status + ': ' + text.slice(0, 200));
+    console.error('4logist auth failed:', r.status, text.slice(0, 500));
+    throw new Error('4logist: не удалось авторизоваться (' + why + ')');
+  }
   token = d.access_token;
   return token;
 }
@@ -62,7 +68,7 @@ app.post('/proxy/api/:entity/list', needAuth, async (req, res) => {
     let r = await call();
     if (r.status === 401) { token = null; r = await call(); }
     res.status(r.status).type('application/json').send(await r.text());
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error(e.message); res.status(500).json({ error: e.message }); }
 });
 
 // ---------- Google Таблицы ----------
